@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import { Customer } from '../database/customerService';
 
 export interface CartItem {
   id: number;
@@ -29,11 +30,11 @@ export interface Coupon {
 }
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: 'money', name: 'Dinheiro', icon: 'cash' },
-  { id: 'credit', name: 'Cartão de Crédito', icon: 'credit-card' },
-  { id: 'debit', name: 'Cartão de Débito', icon: 'credit-card-outline' },
+  { id: 'dinheiro', name: 'Dinheiro', icon: 'cash' },
   { id: 'pix', name: 'PIX', icon: 'qrcode' },
-  { id: 'transfer', name: 'Transferência', icon: 'bank-transfer' },
+  { id: 'cartao_credito', name: 'Cartão de Crédito', icon: 'credit-card' },
+  { id: 'cartao_debito', name: 'Cartão de Débito', icon: 'credit-card-outline' },
+  { id: 'vale', name: 'Vale', icon: 'ticket' },
 ];
 
 // Cupons pré-definidos para teste
@@ -52,7 +53,10 @@ interface CartState {
   couponCode: string;
   paymentMethod: string;
   customerName: string;
+  customerId?: string; // ID do cliente selecionado
+  selectedCustomer?: Customer; // Cliente selecionado
   saleNotes: string;
+  loyaltyPointsUsed: number; // Pontos de fidelidade usados
   
   // Operações do carrinho
   addToCart: (product: Omit<CartItem, 'quantity'>) => void;
@@ -69,9 +73,13 @@ interface CartState {
   removeCoupon: () => void;
   setCouponCode: (code: string) => void;
   
+  // Operações de cliente
+  setCustomer: (customer: Customer | null) => void;
+  setCustomerName: (name: string) => void;
+  useLoyaltyPoints: (points: number) => boolean;
+  
   // Operações de pagamento
   setPaymentMethod: (method: string) => void;
-  setCustomerName: (name: string) => void;
   setSaleNotes: (notes: string) => void;
   
   // Persistência
@@ -86,6 +94,7 @@ interface CartState {
   getFinalTotal: () => number;
   getTotalDiscount: () => number;
   getItemDiscount: (item: CartItem) => number;
+  getLoyaltyPointsEarned: () => number;
 }
 
 const CART_STORAGE_KEY = '@smartpdv_cart';
@@ -97,9 +106,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   discountPercent: 0,
   appliedCoupon: null,
   couponCode: '',
-  paymentMethod: 'money',
+  paymentMethod: 'dinheiro',
   customerName: '',
+  customerId: undefined,
+  selectedCustomer: undefined,
   saleNotes: '',
+  loyaltyPointsUsed: 0,
 
   addToCart: (product) => {
     set((state) => {
@@ -178,9 +190,12 @@ export const useCartStore = create<CartState>((set, get) => ({
       discountPercent: 0,
       appliedCoupon: null,
       couponCode: '',
-      paymentMethod: 'money', 
+      paymentMethod: 'dinheiro', 
       customerName: '', 
-      saleNotes: '' 
+      customerId: undefined,
+      selectedCustomer: undefined,
+      saleNotes: '',
+      loyaltyPointsUsed: 0
     });
     get().saveCart();
   },
@@ -218,7 +233,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   applyCoupon: (code) => {
-    const coupon = DEFAULT_COUPONS.find(c => c.code.toUpperCase() === code.toUpperCase() && c.isActive);
+    const coupon = DEFAULT_COUPONS.find(c => c.code === code && c.isActive);
     
     if (!coupon) {
       alert('Cupom inválido ou inativo!');
@@ -234,11 +249,9 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     set({ 
       appliedCoupon: coupon,
-      couponCode: code.toUpperCase()
+      couponCode: code
     });
     get().saveCart();
-    
-    alert(`Cupom aplicado: ${coupon.code}`);
     return true;
   },
 
@@ -255,13 +268,46 @@ export const useCartStore = create<CartState>((set, get) => ({
     get().saveCart();
   },
 
-  setPaymentMethod: (method) => {
-    set({ paymentMethod: method });
+  setCustomer: (customer) => {
+    set({ 
+      selectedCustomer: customer || undefined,
+      customerId: customer?.id,
+      customerName: customer?.name || ''
+    });
     get().saveCart();
   },
 
   setCustomerName: (name) => {
     set({ customerName: name });
+    get().saveCart();
+  },
+
+  useLoyaltyPoints: (points) => {
+    const state = get();
+    const customer = state.selectedCustomer;
+    
+    if (!customer) {
+      alert('Selecione um cliente para usar pontos de fidelidade!');
+      return false;
+    }
+    
+    if (points > customer.loyaltyPoints) {
+      alert(`Cliente possui apenas ${customer.loyaltyPoints} pontos!`);
+      return false;
+    }
+    
+    if (points > state.getFinalTotal()) {
+      alert('Pontos não podem exceder o valor total da compra!');
+      return false;
+    }
+    
+    set({ loyaltyPointsUsed: points });
+    get().saveCart();
+    return true;
+  },
+
+  setPaymentMethod: (method) => {
+    set({ paymentMethod: method });
     get().saveCart();
   },
 
@@ -271,8 +317,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   loadCart: async () => {
-    set({ isLoading: true });
     try {
+      set({ isLoading: true });
       const savedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
       if (savedCart) {
         const cartData = JSON.parse(savedCart);
@@ -282,9 +328,11 @@ export const useCartStore = create<CartState>((set, get) => ({
           discountPercent: cartData.discountPercent || 0,
           appliedCoupon: cartData.appliedCoupon || null,
           couponCode: cartData.couponCode || '',
-          paymentMethod: cartData.paymentMethod || 'money',
+          paymentMethod: cartData.paymentMethod || 'dinheiro',
           customerName: cartData.customerName || '',
+          customerId: cartData.customerId,
           saleNotes: cartData.saleNotes || '',
+          loyaltyPointsUsed: cartData.loyaltyPointsUsed || 0,
         });
       }
     } catch (error) {
@@ -296,109 +344,89 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   saveCart: async () => {
     try {
-      const { 
-        items, 
-        discount, 
-        discountPercent,
-        appliedCoupon,
-        couponCode,
-        paymentMethod, 
-        customerName, 
-        saleNotes 
-      } = get();
-      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
-        items,
-        discount,
-        discountPercent,
-        appliedCoupon,
-        couponCode,
-        paymentMethod,
-        customerName,
-        saleNotes,
-      }));
+      const state = get();
+      const cartData = {
+        items: state.items,
+        discount: state.discount,
+        discountPercent: state.discountPercent,
+        appliedCoupon: state.appliedCoupon,
+        couponCode: state.couponCode,
+        paymentMethod: state.paymentMethod,
+        customerName: state.customerName,
+        customerId: state.customerId,
+        saleNotes: state.saleNotes,
+        loyaltyPointsUsed: state.loyaltyPointsUsed,
+      };
+      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartData));
     } catch (error) {
       console.error('Erro ao salvar carrinho:', error);
     }
   },
 
-  getSubtotal: () => {
-    const { items } = get();
-    return items.reduce((total, item) => {
+  getTotal: () => {
+    const state = get();
+    return state.items.reduce((total, item) => {
       const itemTotal = item.price * item.quantity;
-      const itemDiscount = get().getItemDiscount(item);
+      const itemDiscount = state.getItemDiscount(item);
       return total + (itemTotal - itemDiscount);
     }, 0);
   },
 
-  getTotal: () => {
-    const { discount, discountPercent, appliedCoupon } = get();
-    const subtotal = get().getSubtotal();
-    
-    // Aplica desconto percentual total
-    const percentDiscount = (subtotal * discountPercent) / 100;
-    
-    // Aplica cupom se existir
-    let couponDiscount = 0;
-    if (appliedCoupon) {
-      if (appliedCoupon.type === 'percentage') {
-        couponDiscount = (subtotal * appliedCoupon.value) / 100;
-        if (appliedCoupon.maxDiscount) {
-          couponDiscount = Math.min(couponDiscount, appliedCoupon.maxDiscount);
-        }
-      } else {
-        couponDiscount = appliedCoupon.value;
-      }
-    }
-    
-    return subtotal - discount - percentDiscount - couponDiscount;
-  },
-
-  getFinalTotal: () => {
-    return get().getTotal();
-  },
-
-  getTotalDiscount: () => {
-    const { discount, discountPercent, appliedCoupon } = get();
-    const subtotal = get().getSubtotal();
-    
-    // Desconto por item
-    const itemDiscounts = get().items.reduce((total, item) => {
-      return total + get().getItemDiscount(item);
-    }, 0);
-    
-    // Desconto percentual total
-    const percentDiscount = (subtotal * discountPercent) / 100;
-    
-    // Desconto do cupom
-    let couponDiscount = 0;
-    if (appliedCoupon) {
-      if (appliedCoupon.type === 'percentage') {
-        couponDiscount = (subtotal * appliedCoupon.value) / 100;
-        if (appliedCoupon.maxDiscount) {
-          couponDiscount = Math.min(couponDiscount, appliedCoupon.maxDiscount);
-        }
-      } else {
-        couponDiscount = appliedCoupon.value;
-      }
-    }
-    
-    return itemDiscounts + discount + percentDiscount + couponDiscount;
-  },
-
-  getItemDiscount: (item) => {
-    const itemTotal = item.price * item.quantity;
-    const fixedDiscount = item.discount || 0;
-    const percentDiscount = item.discountPercent ? (itemTotal * item.discountPercent) / 100 : 0;
-    return fixedDiscount + percentDiscount;
+  getSubtotal: () => {
+    const state = get();
+    return state.items.reduce((total, item) => total + (item.price * item.quantity), 0);
   },
 
   getItemCount: () => {
-    const { items } = get();
-    return items.reduce((count, item) => count + item.quantity, 0);
+    const state = get();
+    return state.items.reduce((count, item) => count + item.quantity, 0);
   },
 
   getItemById: (productId) => {
-    const { items } = get();
-    return items.find(item => item.id === productId);
+    const state = get();
+    return state.items.find(item => item.id === productId);
+  },
+
+  getFinalTotal: () => {
+    const state = get();
+    const subtotal = state.getTotal();
+    const couponDiscount = state.appliedCoupon 
+      ? state.appliedCoupon.type === 'percentage'
+        ? (subtotal * state.appliedCoupon.value / 100)
+        : state.appliedCoupon.value
+      : 0;
+    
+    const totalDiscount = state.discount + (subtotal * state.discountPercent / 100) + couponDiscount;
+    const totalAfterDiscount = Math.max(0, subtotal - totalDiscount);
+    const finalTotal = Math.max(0, totalAfterDiscount - state.loyaltyPointsUsed);
+    
+    return finalTotal;
+  },
+
+  getTotalDiscount: () => {
+    const state = get();
+    const subtotal = state.getTotal();
+    const itemDiscounts = state.items.reduce((total, item) => total + state.getItemDiscount(item), 0);
+    const couponDiscount = state.appliedCoupon 
+      ? state.appliedCoupon.type === 'percentage'
+        ? (subtotal * state.appliedCoupon.value / 100)
+        : state.appliedCoupon.value
+      : 0;
+    
+    return state.discount + (subtotal * state.discountPercent / 100) + itemDiscounts + couponDiscount + state.loyaltyPointsUsed;
+  },
+
+  getItemDiscount: (item) => {
+    const itemDiscount = item.discount || 0;
+    const itemPercentDiscount = item.discountPercent 
+      ? (item.price * item.quantity * item.discountPercent / 100)
+      : 0;
+    return itemDiscount + itemPercentDiscount;
+  },
+
+  getLoyaltyPointsEarned: () => {
+    const state = get();
+    const finalTotal = state.getFinalTotal();
+    return Math.floor(finalTotal / 10); // 1 ponto a cada R$ 10
   },
 }));
