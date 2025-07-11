@@ -8,14 +8,17 @@ import { PaperProvider } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Telas
+import CustomersScreen from './app/clientes'; // Tela de clientes
+import ConfiguracoesScreen from './app/configuracoes'; // Tela de configurações
+import DashboardScreen from './app/dashboard'; // Tela de dashboard
+import InventoryScreen from './app/estoque'; // Tela de estoque
+import PDVScreen from './app/pdv'; // Tela do PDV
+import ReportsScreen from './app/relatorios'; // Tela de relatórios
 import AddProductScreen from './screens/AddProductScreen'; // Tela de formulário
-import CustomersScreen from './screens/CustomersScreen';
-import PDVScreen from './screens/PDVScreen'; // Supondo que você mantenha os outros
 import ProductsListScreen from './screens/ProductsListScreen'; // Tela de lista
-import ReportsScreen from './screens/ReportsScreen';
 
 // Banco de Dados
-import { initDatabase } from './src/database/productService';
+import { initDatabase } from './src/database';
 
 // --- Navegador da Pilha de Produtos ---
 const ProductStack = createStackNavigator();
@@ -64,14 +67,17 @@ export default function App() {
     <PaperProvider>
       <NavigationContainer>
         <Tab.Navigator
-          initialRouteName="PDV"
+          initialRouteName="Dashboard"
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
-              let iconName;
-              if (route.name === 'PDV') iconName = 'point-of-sale';
+              let iconName = 'help'; // Icon padrão
+              if (route.name === 'Dashboard') iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
+              else if (route.name === 'PDV') iconName = 'point-of-sale';
               else if (route.name === 'ProdutosStack') iconName = focused ? 'package-variant-closed' : 'package-variant-closed-outline';
               else if (route.name === 'Clientes') iconName = focused ? 'account-group' : 'account-group-outline';
+              else if (route.name === 'Estoque') iconName = focused ? 'warehouse' : 'warehouse-outline';
               else if (route.name === 'Relatórios') iconName = 'chart-bar';
+              else if (route.name === 'Configurações') iconName = focused ? 'cog' : 'cog-outline';
               return <Icon name={iconName} size={size} color={color} />;
             },
             tabBarActiveTintColor: '#6200ee',
@@ -79,6 +85,8 @@ export default function App() {
             headerShown: false, // Esconde o header padrão das abas
           })}
         >
+          <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: true, title: 'Dashboard' }}/>
+          <Tab.Screen name="PDV" component={PDVScreen} options={{ title: 'Frente de Caixa', headerShown: true }}/>
           {/* A aba "Produtos" agora usa o NAVEGADOR DE PILHA */}
           <Tab.Screen
             name="ProdutosStack"
@@ -86,8 +94,9 @@ export default function App() {
             options={{ title: 'Produtos' }}
           />
           <Tab.Screen name="Clientes" component={CustomersScreen} options={{ headerShown: true }}/>
-          <Tab.Screen name="PDV" component={PDVScreen} options={{ title: 'Frente de Caixa', headerShown: true }}/>
+          <Tab.Screen name="Estoque" component={InventoryScreen} options={{ headerShown: true }}/>
           <Tab.Screen name="Relatórios" component={ReportsScreen} options={{ headerShown: true }} />
+          <Tab.Screen name="Configurações" component={ConfiguracoesScreen} options={{ headerShown: true }} />
         </Tab.Navigator>
       </NavigationContainer>
     </PaperProvider>
