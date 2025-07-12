@@ -3,7 +3,6 @@ import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import {
     Button,
     Card,
-    Chip,
     Dialog,
     Divider,
     IconButton,
@@ -11,15 +10,16 @@ import {
     Searchbar,
     SegmentedButtons,
     Text,
-    TextInput,
-    Title
+    TextInput
 } from 'react-native-paper';
 import ItemDiscountDialog from '../components/ItemDiscountDialog';
+import PixPaymentDialog from '../components/PixPaymentDialog';
+import PrintReceiptDialog from '../components/PrintReceiptDialog';
 import type { Product } from '../src/database/productService';
 import { db } from '../src/database/productService';
 import { convertCartItemToSaleItem, salesDb } from '../src/database/salesService';
 import type { CartItem } from '../src/store/cartStore';
-import { DEFAULT_COUPONS, PAYMENT_METHODS, useCartStore } from '../src/store/cartStore';
+import { PAYMENT_METHODS, useCartStore } from '../src/store/cartStore';
 
 export default function PDVScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +28,8 @@ export default function PDVScreen() {
   const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showCouponDialog, setShowCouponDialog] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [showPixDialog, setShowPixDialog] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [saleNotes, setSaleNotes] = useState('');
   const [discountInput, setDiscountInput] = useState('');
@@ -35,6 +37,7 @@ export default function PDVScreen() {
   const [couponCodeInput, setCouponCodeInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('money');
   const [selectedItem, setSelectedItem] = useState<CartItem | null>(null);
+  const [lastSale, setLastSale] = useState<any>(null);
   
   const { 
     items, 
@@ -158,6 +161,7 @@ export default function PDVScreen() {
       // Cria a venda
       const sale = {
         items: saleItems,
+        subtotal: getSubtotal(),
         total: getSubtotal(),
         discount: getTotalDiscount(),
         finalTotal: getTotal(),
@@ -167,7 +171,8 @@ export default function PDVScreen() {
       };
 
       // Salva a venda
-      await salesDb.saveSale(sale);
+      const savedSale = await salesDb.saveSale(sale);
+      setLastSale(savedSale);
 
       // Limpa o carrinho
       clearCart();
@@ -184,11 +189,36 @@ export default function PDVScreen() {
       
       setShowFinalizeDialog(false);
       
-      Alert.alert('Sucesso!', 'Venda finalizada com sucesso!');
+      // Se for PIX, abre o diálogo de pagamento PIX
+      if (paymentMethod === 'pix') {
+        setShowPixDialog(true);
+      } else {
+        // Para outros métodos, pergunta se quer imprimir
+        Alert.alert(
+          'Venda Finalizada!',
+          'Venda finalizada com sucesso! Deseja imprimir o comprovante?',
+          [
+            { text: 'Não', style: 'cancel' },
+            { text: 'Sim', onPress: () => setShowPrintDialog(true) }
+          ]
+        );
+      }
     } catch (error) {
       console.error('Erro ao finalizar venda:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao finalizar a venda.');
     }
+  };
+
+  const handlePixPaymentSuccess = (payment: any) => {
+    setShowPixDialog(false);
+    Alert.alert(
+      'Pagamento Confirmado!',
+      'Pagamento PIX realizado com sucesso! Deseja imprimir o comprovante?',
+      [
+        { text: 'Não', style: 'cancel' },
+        { text: 'Sim', onPress: () => setShowPrintDialog(true) }
+      ]
+    );
   };
 
   const handleDiscountChange = (value: string) => {
@@ -199,8 +229,12 @@ export default function PDVScreen() {
 
   const handleDiscountPercentChange = (value: string) => {
     setDiscountPercentInput(value);
-    const percentValue = parseFloat(value) || 0;
-    setDiscountPercent(percentValue);
+    const discountPercentValue = parseFloat(value) || 0;
+    setDiscountPercent(discountPercentValue);
+  };
+
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2)}`;
   };
 
   const renderCartItem = ({ item }: { item: CartItem }) => {
@@ -209,49 +243,61 @@ export default function PDVScreen() {
     const finalItemTotal = itemTotal - itemDiscount;
 
     return (
-      <Card style={styles.cartItemCard} mode="outlined">
+      <Card style={styles.cartItem} mode="outlined">
         <Card.Content>
           <View style={styles.cartItemHeader}>
             <View style={styles.cartItemInfo}>
-              <Title style={styles.itemName}>{item.name}</Title>
-              <Text style={styles.itemPrice}>R$ {item.price.toFixed(2)}</Text>
-              {itemDiscount > 0 && (
-                <Text style={styles.itemDiscount}>
-                  Desconto: R$ {itemDiscount.toFixed(2)}
-                </Text>
-              )}
+              <Text style={styles.cartItemName}>{item.name}</Text>
+              <Text style={styles.cartItemPrice}>
+                {formatCurrency(item.price)} cada
+              </Text>
             </View>
             <View style={styles.cartItemActions}>
               <IconButton
-                icon="percent"
+                icon="minus"
                 size={20}
-                onPress={() => handleItemDiscount(item)}
-                style={styles.discountButton}
+                onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                disabled={item.quantity <= 1}
+              />
+              <Text style={styles.cartItemQuantity}>{item.quantity}</Text>
+              <IconButton
+                icon="plus"
+                size={20}
+                onPress={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                disabled={item.quantity >= item.stock}
               />
               <IconButton
                 icon="delete"
                 size={20}
                 onPress={() => handleRemoveItem(item.id)}
-                style={styles.deleteButton}
+                iconColor="#ff6b6b"
               />
             </View>
           </View>
           
-          <View style={styles.quantityControls}>
-            <IconButton
-              icon="minus"
-              size={20}
-              onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-              disabled={item.quantity <= 1}
-            />
-            <Text style={styles.quantityText}>{item.quantity}</Text>
-            <IconButton
-              icon="plus"
-              size={20}
-              onPress={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-              disabled={item.quantity >= item.stock}
-            />
-            <Text style={styles.itemTotal}>R$ {finalItemTotal.toFixed(2)}</Text>
+          <View style={styles.cartItemDetails}>
+            <Text style={styles.cartItemSubtotal}>
+              Subtotal: {formatCurrency(itemTotal)}
+            </Text>
+            {itemDiscount > 0 && (
+              <Text style={styles.cartItemDiscount}>
+                Desconto: -{formatCurrency(itemDiscount)}
+              </Text>
+            )}
+            <Text style={styles.cartItemTotal}>
+              Total: {formatCurrency(finalItemTotal)}
+            </Text>
+          </View>
+
+          <View style={styles.cartItemFooter}>
+            <Button
+              mode="outlined"
+              onPress={() => handleItemDiscount(item)}
+              compact
+              icon="percent"
+            >
+              Desconto
+            </Button>
           </View>
         </Card.Content>
       </Card>
@@ -259,13 +305,17 @@ export default function PDVScreen() {
   };
 
   const renderProductSearchItem = ({ item }: { item: Product }) => (
-    <Card style={styles.searchItemCard} mode="outlined">
+    <Card style={styles.productItem} mode="outlined">
       <Card.Content>
-        <View style={styles.searchItemContent}>
-          <View>
-            <Title style={styles.searchItemName}>{item.name}</Title>
-            <Text style={styles.searchItemPrice}>R$ {item.price.toFixed(2)}</Text>
-            <Text style={styles.searchItemStock}>Estoque: {item.stock}</Text>
+        <View style={styles.productItemHeader}>
+          <View style={styles.productItemInfo}>
+            <Text style={styles.productItemName}>{item.name}</Text>
+            <Text style={styles.productItemPrice}>
+              {formatCurrency(item.price)}
+            </Text>
+            <Text style={styles.productItemStock}>
+              Estoque: {item.stock}
+            </Text>
           </View>
           <Button
             mode="contained"
@@ -273,7 +323,7 @@ export default function PDVScreen() {
             disabled={item.stock <= 0}
             compact
           >
-            {item.stock <= 0 ? 'Sem estoque' : 'Adicionar'}
+            Adicionar
           </Button>
         </View>
       </Card.Content>
@@ -285,33 +335,19 @@ export default function PDVScreen() {
       <Dialog visible={showCouponDialog} onDismiss={() => setShowCouponDialog(false)}>
         <Dialog.Title>Aplicar Cupom</Dialog.Title>
         <Dialog.Content>
-          <View style={styles.couponContent}>
-            <TextInput
-              label="Código do Cupom"
-              value={couponCodeInput}
-              onChangeText={setCouponCodeInput}
-              style={styles.couponInput}
-              mode="outlined"
-              autoCapitalize="characters"
-            />
-            
-            <Text style={styles.couponsTitle}>Cupons Disponíveis:</Text>
-            {DEFAULT_COUPONS.map((coupon) => (
-              <View key={coupon.id} style={styles.couponItem}>
-                <Text style={styles.couponCode}>{coupon.code}</Text>
-                <Text style={styles.couponDetails}>
-                  {coupon.type === 'percentage' ? `${coupon.value}%` : `R$ ${coupon.value.toFixed(2)}`}
-                  {coupon.minPurchase && ` - Mín: R$ ${coupon.minPurchase.toFixed(2)}`}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <TextInput
+            label="Código do Cupom"
+            value={couponCodeInput}
+            onChangeText={setCouponCodeInput}
+            style={styles.input}
+          />
+          <Text style={styles.couponInfo}>
+            Cupons disponíveis: DESCONTO10, FIXO5, MEGA20
+          </Text>
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={() => setShowCouponDialog(false)}>Cancelar</Button>
-          <Button mode="contained" onPress={handleApplyCoupon}>
-            Aplicar
-          </Button>
+          <Button onPress={handleApplyCoupon}>Aplicar</Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>
@@ -322,83 +358,77 @@ export default function PDVScreen() {
       <Dialog visible={showFinalizeDialog} onDismiss={() => setShowFinalizeDialog(false)}>
         <Dialog.Title>Finalizar Venda</Dialog.Title>
         <Dialog.Content>
-          <ScrollView>
-            <View style={styles.dialogContent}>
-              <TextInput
-                label="Nome do Cliente (opcional)"
-                value={customerName}
-                onChangeText={setCustomerName}
-                style={styles.dialogInput}
-                mode="outlined"
-              />
+          <ScrollView style={styles.dialogContent}>
+            <TextInput
+              label="Nome do Cliente (opcional)"
+              value={customerName}
+              onChangeText={setCustomerName}
+              style={styles.input}
+            />
+            
+            <TextInput
+              label="Observações (opcional)"
+              value={saleNotes}
+              onChangeText={setSaleNotes}
+              multiline
+              numberOfLines={3}
+              style={styles.input}
+            />
 
-              <TextInput
-                label="Observações (opcional)"
-                value={saleNotes}
-                onChangeText={setSaleNotes}
-                style={styles.dialogInput}
-                mode="outlined"
-                multiline
-                numberOfLines={3}
-              />
+            <Text style={styles.sectionTitle}>Forma de Pagamento</Text>
+            <SegmentedButtons
+              value={paymentMethod}
+              onValueChange={setPaymentMethod}
+              buttons={PAYMENT_METHODS.map(method => ({
+                value: method.id,
+                label: method.name,
+                icon: method.icon
+              }))}
+              style={styles.paymentButtons}
+            />
 
-              <TextInput
-                label="Desconto Fixo (R$)"
-                value={discountInput}
-                onChangeText={handleDiscountChange}
-                style={styles.dialogInput}
-                mode="outlined"
-                keyboardType="numeric"
-                placeholder="0.00"
-              />
+            <Divider style={styles.divider} />
 
-              <TextInput
-                label="Desconto Percentual (%)"
-                value={discountPercentInput}
-                onChangeText={handleDiscountPercentChange}
-                style={styles.dialogInput}
-                mode="outlined"
-                keyboardType="numeric"
-                placeholder="0"
-              />
-
-              <Text style={styles.paymentLabel}>Forma de Pagamento:</Text>
-              <SegmentedButtons
-                value={paymentMethod}
-                onValueChange={setPaymentMethod}
-                buttons={PAYMENT_METHODS.map(method => ({
-                  value: method.id,
-                  label: method.name,
-                  icon: method.icon,
-                }))}
-                style={styles.paymentButtons}
-              />
-
-              <Divider style={styles.dialogDivider} />
-
-              <View style={styles.dialogTotals}>
-                <View style={styles.dialogTotalRow}>
-                  <Text>Subtotal:</Text>
-                  <Text>R$ {getSubtotal().toFixed(2)}</Text>
+            <View style={styles.saleSummary}>
+              <View style={styles.summaryRow}>
+                <Text>Subtotal:</Text>
+                <Text>{formatCurrency(getSubtotal())}</Text>
+              </View>
+              {discount > 0 && (
+                <View style={styles.summaryRow}>
+                  <Text>Desconto:</Text>
+                  <Text style={styles.discountText}>-{formatCurrency(discount)}</Text>
                 </View>
-                {getTotalDiscount() > 0 && (
-                  <View style={styles.dialogTotalRow}>
-                    <Text>Total de Descontos:</Text>
-                    <Text style={styles.discountText}>-R$ {getTotalDiscount().toFixed(2)}</Text>
-                  </View>
-                )}
-                <View style={styles.dialogTotalRow}>
-                  <Text style={styles.finalTotalLabel}>Total:</Text>
-                  <Text style={styles.finalTotalValue}>R$ {getTotal().toFixed(2)}</Text>
+              )}
+              {discountPercent > 0 && (
+                <View style={styles.summaryRow}>
+                  <Text>Desconto ({discountPercent}%):</Text>
+                  <Text style={styles.discountText}>
+                    -{formatCurrency((getSubtotal() * discountPercent) / 100)}
+                  </Text>
                 </View>
+              )}
+              {appliedCoupon && (
+                <View style={styles.summaryRow}>
+                  <Text>Cupom {appliedCoupon.code}:</Text>
+                  <Text style={styles.discountText}>
+                    -{formatCurrency(appliedCoupon.type === 'percentage' ? 
+                      (getSubtotal() * appliedCoupon.value) / 100 : 
+                      appliedCoupon.value)}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.summaryRow}>
+                <Text style={styles.finalTotalLabel}>Total Final:</Text>
+                <Text style={styles.finalTotalValue}>{formatCurrency(getTotal())}</Text>
               </View>
             </View>
           </ScrollView>
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={() => setShowFinalizeDialog(false)}>Cancelar</Button>
-          <Button mode="contained" onPress={confirmFinalizeSale}>
-            Confirmar Venda
+          <Button onPress={confirmFinalizeSale} mode="contained">
+            Finalizar Venda
           </Button>
         </Dialog.Actions>
       </Dialog>
@@ -407,150 +437,110 @@ export default function PDVScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header com busca */}
-      <Card style={styles.searchCard}>
-        <Card.Content>
-          <View style={styles.searchHeader}>
-            <Searchbar
-              placeholder="Buscar produtos..."
-              onChangeText={handleSearchChange}
-              value={searchQuery}
-              style={styles.searchbar}
-              onFocus={() => setShowProductSearch(true)}
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Frente de Caixa</Text>
+        <View style={styles.headerActions}>
+          <Button
+            mode="outlined"
+            onPress={() => setShowCouponDialog(true)}
+            icon="ticket-percent"
+            compact
+          >
+            Cupom
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={clearCart}
+            icon="delete-sweep"
+            compact
+            disabled={items.length === 0}
+          >
+            Limpar
+          </Button>
+        </View>
+      </View>
+
+      {/* Busca de Produtos */}
+      <View style={styles.searchSection}>
+        <Searchbar
+          placeholder="Buscar produtos..."
+          onChangeText={handleSearchChange}
+          value={searchQuery}
+          onFocus={() => setShowProductSearch(true)}
+          style={styles.searchbar}
+        />
+        
+        {showProductSearch && products.length > 0 && (
+          <View style={styles.productSearchResults}>
+            <FlatList
+              data={products}
+              renderItem={renderProductSearchItem}
+              keyExtractor={(item) => item.id.toString()}
+              style={styles.productList}
             />
-            <Button
-              mode="outlined"
-              onPress={() => setShowProductSearch(!showProductSearch)}
-              style={styles.toggleSearchButton}
-            >
-              {showProductSearch ? 'Ocultar' : 'Buscar'}
-            </Button>
           </View>
-          
-          {showProductSearch && searchQuery.length > 0 && (
-            <View style={styles.searchResults}>
-              <FlatList
-                data={products}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderProductSearchItem}
-                style={styles.searchList}
-                nestedScrollEnabled
-              />
-            </View>
-          )}
-        </Card.Content>
-      </Card>
+        )}
+      </View>
 
       {/* Carrinho */}
-      <Card style={styles.cartContainer}>
-        <Card.Content>
-          <View style={styles.cartHeader}>
-            <Title>Carrinho de Compras</Title>
-            <Chip icon="shopping-cart" mode="outlined">
-              {getItemCount()} itens
-            </Chip>
-          </View>
-          
-          {items.length === 0 ? (
-            <View style={styles.emptyCart}>
-              <Text style={styles.emptyCartText}>
-                Seu carrinho está vazio
-              </Text>
-              <Text style={styles.emptyCartSubtext}>
-                Use a busca acima para adicionar produtos
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={items}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderCartItem}
-              style={styles.cartList}
-              nestedScrollEnabled
-            />
-          )}
-          
-          {items.length > 0 && (
-            <View style={styles.totalContainer}>
-              <Divider style={styles.divider} />
-              <View style={styles.totalRow}>
-                <Text>Subtotal:</Text>
-                <Text>R$ {getSubtotal().toFixed(2)}</Text>
-              </View>
-              {getTotalDiscount() > 0 && (
-                <View style={styles.totalRow}>
-                  <Text>Total de Descontos:</Text>
-                  <Text style={styles.discountText}>-R$ {getTotalDiscount().toFixed(2)}</Text>
-                </View>
-              )}
-              <View style={styles.totalRow}>
-                <Title>Total:</Title>
-                <Title style={styles.totalValue}>R$ {getTotal().toFixed(2)}</Title>
-              </View>
-            </View>
-          )}
-        </Card.Content>
-      </Card>
+      <View style={styles.cartSection}>
+        <View style={styles.cartHeader}>
+          <Text style={styles.cartTitle}>Carrinho ({getItemCount()} itens)</Text>
+          <Text style={styles.cartTotal}>{formatCurrency(getTotal())}</Text>
+        </View>
 
-      {/* Botões de ação */}
-      <View style={styles.actionButtons}>
-        {items.length > 0 && (
-          <>
-            <Button
-              mode="outlined"
-              onPress={() => setShowCouponDialog(true)}
-              style={styles.couponButton}
-              icon="ticket-percent"
-            >
-              Cupom
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={clearCart}
-              style={styles.clearButton}
-              icon="delete-sweep"
-            >
-              Limpar
-            </Button>
-          </>
+        {items.length === 0 ? (
+          <View style={styles.emptyCart}>
+            <Text style={styles.emptyCartText}>
+              Carrinho vazio. Adicione produtos para começar.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={items}
+            renderItem={renderCartItem}
+            keyExtractor={(item) => item.id.toString()}
+            style={styles.cartList}
+          />
         )}
+      </View>
+
+      {/* Botão Finalizar */}
+      <View style={styles.footer}>
         <Button
-          icon="cash-register"
           mode="contained"
           onPress={handleFinalizeSale}
-          style={styles.finalizeButton}
           disabled={items.length === 0}
+          style={styles.finalizeButton}
+          icon="check"
         >
-          Finalizar Venda
+          Finalizar Venda ({formatCurrency(getTotal())})
         </Button>
       </View>
 
-      {/* Cupom aplicado */}
-      {appliedCoupon && (
-        <Card style={styles.couponCard}>
-          <Card.Content>
-            <View style={styles.couponApplied}>
-              <Text style={styles.couponAppliedText}>
-                Cupom aplicado: {appliedCoupon.code}
-              </Text>
-              <IconButton
-                icon="close"
-                size={16}
-                onPress={removeCoupon}
-                style={styles.removeCouponButton}
-              />
-            </View>
-          </Card.Content>
-        </Card>
-      )}
-
+      {/* Diálogos */}
       {renderCouponDialog()}
       {renderFinalizeDialog()}
+      
       <ItemDiscountDialog
         visible={showDiscountDialog}
         onDismiss={() => setShowDiscountDialog(false)}
         item={selectedItem}
         onApplyDiscount={handleApplyItemDiscount}
+      />
+
+      <PrintReceiptDialog
+        visible={showPrintDialog}
+        onDismiss={() => setShowPrintDialog(false)}
+        sale={lastSale}
+      />
+
+      <PixPaymentDialog
+        visible={showPixDialog}
+        onDismiss={() => setShowPixDialog(false)}
+        sale={lastSale}
+        onPaymentSuccess={handlePixPaymentSuccess}
       />
     </View>
   );
@@ -562,49 +552,66 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#f6f6f6',
   },
-  searchCard: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  searchHeader: {
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  headerActions: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
   },
+  searchSection: {
+    marginBottom: 16,
+  },
   searchbar: {
-    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  toggleSearchButton: {
-    minWidth: 80,
-  },
-  searchResults: {
+  productSearchResults: {
     marginTop: 8,
     maxHeight: 200,
   },
-  searchList: {
+  productList: {
     maxHeight: 200,
   },
-  searchItemCard: {
+  productItem: {
     marginBottom: 4,
   },
-  searchItemContent: {
+  productItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  searchItemName: {
+  productItemInfo: {
+    flex: 1,
+  },
+  productItemName: {
     fontSize: 16,
+    fontWeight: 'bold',
     marginBottom: 4,
   },
-  searchItemPrice: {
+  productItemPrice: {
     fontSize: 14,
     color: '#666',
     marginBottom: 2,
   },
-  searchItemStock: {
+  productItemStock: {
     fontSize: 12,
     color: '#999',
   },
-  cartContainer: {
+  cartSection: {
     flex: 1,
     marginBottom: 16,
   },
@@ -614,6 +621,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  cartTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  cartTotal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6200ee',
+  },
   emptyCart: {
     flex: 1,
     justifyContent: 'center',
@@ -621,146 +638,87 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyCartText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#666',
-    marginBottom: 8,
-  },
-  emptyCartSubtext: {
-    fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
   cartList: {
     flex: 1,
   },
-  cartItemCard: {
+  cartItem: {
     marginBottom: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   cartItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   cartItemInfo: {
     flex: 1,
   },
-  itemName: {
+  cartItemName: {
     fontSize: 16,
-    marginBottom: 4,
+    fontWeight: 'bold',
   },
-  itemPrice: {
+  cartItemPrice: {
     fontSize: 14,
     color: '#666',
   },
-  itemDiscount: {
-    fontSize: 12,
-    color: '#ff6b6b',
-    fontWeight: '500',
-  },
   cartItemActions: {
     flexDirection: 'row',
-  },
-  discountButton: {
-    margin: 0,
-  },
-  deleteButton: {
-    margin: 0,
-  },
-  quantityControls: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
   },
-  quantityText: {
+  cartItemQuantity: {
     fontSize: 16,
     fontWeight: 'bold',
     minWidth: 30,
     textAlign: 'center',
   },
-  itemTotal: {
+  cartItemDetails: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  cartItemSubtotal: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  cartItemDiscount: {
+    fontSize: 14,
+    color: '#ff6b6b',
+    marginBottom: 4,
+  },
+  cartItemTotal: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#6200ee',
   },
-  totalContainer: {
+  cartItemFooter: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  footer: {
     marginTop: 16,
   },
-  divider: {
-    marginBottom: 16,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  totalValue: {
-    color: '#6200ee',
-  },
-  discountText: {
-    color: '#ff6b6b',
-    fontWeight: '500',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  couponButton: {
-    flex: 1,
-  },
-  clearButton: {
-    flex: 1,
-  },
   finalizeButton: {
-    flex: 2,
-  },
-  couponCard: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4caf50',
-  },
-  couponApplied: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  couponAppliedText: {
-    color: '#2e7d32',
-    fontWeight: '500',
-  },
-  removeCouponButton: {
-    margin: 0,
-  },
-  couponContent: {
-    paddingVertical: 8,
-  },
-  couponInput: {
-    marginBottom: 16,
-  },
-  couponsTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  couponItem: {
-    paddingVertical: 4,
-  },
-  couponCode: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  couponDetails: {
-    fontSize: 12,
-    color: '#666',
+    backgroundColor: '#6200ee',
   },
   dialogContent: {
     paddingVertical: 8,
   },
-  dialogInput: {
+  input: {
     marginBottom: 16,
   },
-  paymentLabel: {
+  sectionTitle: {
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 8,
@@ -768,16 +726,20 @@ const styles = StyleSheet.create({
   paymentButtons: {
     marginBottom: 16,
   },
-  dialogDivider: {
+  divider: {
     marginVertical: 16,
   },
-  dialogTotals: {
+  saleSummary: {
     marginTop: 8,
   },
-  dialogTotalRow: {
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 4,
+  },
+  discountText: {
+    color: '#ff6b6b',
+    fontWeight: '500',
   },
   finalTotalLabel: {
     fontSize: 16,
@@ -787,5 +749,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#6200ee',
+  },
+  couponInfo: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
   },
 });

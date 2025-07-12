@@ -7,15 +7,22 @@ import { salesDb as salesService } from './salesService';
 
 export const initDatabase = async () => {
   try {
-    await productService.initDatabase();
-    await salesService.init();
-    await customerService.init();
-    await inventoryService.init();
-    await paymentService.init();
-    await backupService.init();
-    console.log('Todos os serviços de banco de dados inicializados com sucesso!');
+    console.log('🔄 Inicializando banco de dados...');
+    
+    // Inicializa todos os serviços em paralelo
+    await Promise.all([
+      productService.initDatabase(),
+      salesService.init(),
+      customerService.init(),
+      inventoryService.init(),
+      paymentService.init(),
+      backupService.init(),
+    ]);
+    
+    console.log('✅ Todos os serviços de banco de dados inicializados com sucesso!');
   } catch (error) {
-    console.error('Erro ao inicializar banco de dados:', error);
+    console.error('❌ Erro ao inicializar banco de dados:', error);
+    throw error;
   }
 };
 

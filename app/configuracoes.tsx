@@ -1,305 +1,244 @@
 import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
+    Button,
+    Card,
+    Divider,
+    List,
     Switch,
     Text,
-    View
-} from 'react-native';
-import { Button, Card, Divider, List } from 'react-native-paper';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { backupService, BackupStats } from '../src/database/backupService';
+    TextInput,
+    Title
+} from 'react-native-paper';
+import BackupManagerDialog from '../components/BackupManagerDialog';
+import type { PixConfig } from '../src/services/pixService';
+import { pixService } from '../src/services/pixService';
 
 export default function ConfiguracoesScreen() {
-  const [backupStats, setBackupStats] = useState<BackupStats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [autoBackup, setAutoBackup] = useState(true);
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [pixConfig, setPixConfig] = useState<PixConfig>({
+    pixKey: 'smartpdv@exemplo.com',
+    pixKeyType: 'email',
+    beneficiaryName: 'SmartPDV Store',
+    beneficiaryCity: 'SAO PAULO'
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
 
   useEffect(() => {
-    loadBackupStats();
+    loadPixConfig();
   }, []);
 
-  const loadBackupStats = async () => {
+  const loadPixConfig = async () => {
     try {
-      const stats = await backupService.getBackupStats();
-      setBackupStats(stats);
+      // Em uma implementação real, carregaria do storage
+      // Por enquanto, usa os valores padrão
     } catch (error) {
-      console.error('Erro ao carregar estatísticas de backup:', error);
+      console.error('Erro ao carregar configurações PIX:', error);
     }
   };
 
-  const handleCreateBackup = async () => {
+  const savePixConfig = async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      await backupService.createBackup();
-      await loadBackupStats();
-      Alert.alert('Sucesso', 'Backup criado com sucesso!');
+      pixService.setConfig(pixConfig);
+      Alert.alert('Sucesso', 'Configurações PIX salvas com sucesso!');
     } catch (error) {
-      Alert.alert('Erro', 'Erro ao criar backup');
+      console.error('Erro ao salvar configurações PIX:', error);
+      Alert.alert('Erro', 'Não foi possível salvar as configurações PIX.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleExportBackup = async () => {
+  const testPixConfig = async () => {
     try {
-      setLoading(true);
-      await backupService.exportBackup();
-      Alert.alert('Sucesso', 'Backup exportado com sucesso!');
+      // Simula uma venda de teste
+      const testSale = {
+        id: 'test_001',
+        items: [{ id: 1, name: 'Produto Teste', price: 10.00, quantity: 1 }],
+        subtotal: 10.00,
+        total: 10.00,
+        discount: 0,
+        finalTotal: 10.00,
+        paymentMethod: 'pix',
+        date: new Date().toISOString(),
+        customerName: 'Cliente Teste',
+        notes: 'Venda de teste'
+      };
+
+      const payment = await pixService.generatePixPayment(testSale);
+      Alert.alert(
+        'Teste PIX',
+        `QR Code gerado com sucesso!\n\nChave: ${payment.pixKey}\nValor: R$ ${payment.amount.toFixed(2)}\n\nID do Pagamento: ${payment.id}`
+      );
     } catch (error) {
-      Alert.alert('Erro', 'Erro ao exportar backup');
-    } finally {
-      setLoading(false);
+      console.error('Erro no teste PIX:', error);
+      Alert.alert('Erro', 'Não foi possível gerar o QR Code de teste.');
     }
   };
-
-  const handleAutoBackup = async () => {
-    try {
-      setLoading(true);
-      await backupService.autoBackup();
-      await loadBackupStats();
-      Alert.alert('Sucesso', 'Backup automático realizado!');
-    } catch (error) {
-      Alert.alert('Erro', 'Erro no backup automático');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClearData = () => {
-    Alert.alert(
-      'Confirmar Limpeza',
-      'Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Limpar',
-          style: 'destructive',
-          onPress: () => {
-            // Implementar limpeza de dados
-            Alert.alert('Sucesso', 'Dados limpos com sucesso!');
-          },
-        },
-      ]
-    );
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Nunca';
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const renderBackupSection = () => (
-    <Card style={styles.section}>
-      <Card.Content>
-        <View style={styles.sectionHeader}>
-          <Icon name="backup-restore" size={24} color="#6200ee" />
-          <Text style={styles.sectionTitle}>Backup e Restauração</Text>
-        </View>
-
-        {backupStats && (
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Último Backup</Text>
-              <Text style={styles.statValue}>{formatDate(backupStats.lastBackup)}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Total de Backups</Text>
-              <Text style={styles.statValue}>{backupStats.backupCount}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Registros</Text>
-              <Text style={styles.statValue}>{backupStats.totalRecords}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Tamanho Total</Text>
-              <Text style={styles.statValue}>{formatBytes(backupStats.totalSize)}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          <Button
-            mode="contained"
-            onPress={handleCreateBackup}
-            loading={loading}
-            style={styles.button}
-            icon="backup-restore"
-          >
-            Criar Backup
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={handleExportBackup}
-            loading={loading}
-            style={styles.button}
-            icon="export"
-          >
-            Exportar
-          </Button>
-          <Button
-            mode="outlined"
-            onPress={handleAutoBackup}
-            loading={loading}
-            style={styles.button}
-            icon="auto-fix"
-          >
-            Backup Automático
-          </Button>
-        </View>
-      </Card.Content>
-    </Card>
-  );
-
-  const renderGeneralSettings = () => (
-    <Card style={styles.section}>
-      <Card.Content>
-        <View style={styles.sectionHeader}>
-          <Icon name="cog" size={24} color="#6200ee" />
-          <Text style={styles.sectionTitle}>Configurações Gerais</Text>
-        </View>
-
-        <List.Item
-          title="Backup Automático"
-          description="Fazer backup automaticamente a cada 24 horas"
-          left={(props) => <List.Icon {...props} icon="backup-restore" />}
-          right={() => (
-            <Switch
-              value={autoBackup}
-              onValueChange={setAutoBackup}
-              trackColor={{ false: '#767577', true: '#6200ee' }}
-              thumbColor={autoBackup ? '#f4f3f4' : '#f4f3f4'}
-            />
-          )}
-        />
-
-        <Divider />
-
-        <List.Item
-          title="Notificações"
-          description="Receber alertas de estoque baixo e vendas"
-          left={(props) => <List.Icon {...props} icon="bell" />}
-          right={() => (
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: '#767577', true: '#6200ee' }}
-              thumbColor={notifications ? '#f4f3f4' : '#f4f3f4'}
-            />
-          )}
-        />
-
-        <Divider />
-
-        <List.Item
-          title="Modo Escuro"
-          description="Usar tema escuro no aplicativo"
-          left={(props) => <List.Icon {...props} icon="theme-light-dark" />}
-          right={() => (
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#767577', true: '#6200ee' }}
-              thumbColor={darkMode ? '#f4f3f4' : '#f4f3f4'}
-            />
-          )}
-        />
-      </Card.Content>
-    </Card>
-  );
-
-  const renderDataManagement = () => (
-    <Card style={styles.section}>
-      <Card.Content>
-        <View style={styles.sectionHeader}>
-          <Icon name="database" size={24} color="#6200ee" />
-          <Text style={styles.sectionTitle}>Gerenciamento de Dados</Text>
-        </View>
-
-        <List.Item
-          title="Limpar Todos os Dados"
-          description="Remover todos os produtos, vendas e clientes"
-          left={(props) => <List.Icon {...props} icon="delete" color="#d32f2f" />}
-          onPress={handleClearData}
-        />
-
-        <Divider />
-
-        <List.Item
-          title="Exportar Relatórios"
-          description="Exportar relatórios em formato CSV"
-          left={(props) => <List.Icon {...props} icon="file-export" />}
-          onPress={() => Alert.alert('Em desenvolvimento', 'Funcionalidade em desenvolvimento')}
-        />
-
-        <Divider />
-
-        <List.Item
-          title="Importar Dados"
-          description="Importar dados de arquivo CSV"
-          left={(props) => <List.Icon {...props} icon="file-import" />}
-          onPress={() => Alert.alert('Em desenvolvimento', 'Funcionalidade em desenvolvimento')}
-        />
-      </Card.Content>
-    </Card>
-  );
-
-  const renderAboutSection = () => (
-    <Card style={styles.section}>
-      <Card.Content>
-        <View style={styles.sectionHeader}>
-          <Icon name="information" size={24} color="#6200ee" />
-          <Text style={styles.sectionTitle}>Sobre o App</Text>
-        </View>
-
-        <View style={styles.aboutContainer}>
-          <Text style={styles.appName}>SmartPDV</Text>
-          <Text style={styles.appVersion}>Versão 1.0.0</Text>
-          <Text style={styles.appDescription}>
-            Sistema de Ponto de Venda inteligente para pequenos e médios negócios
-          </Text>
-          
-          <View style={styles.featuresList}>
-            <Text style={styles.featuresTitle}>Funcionalidades:</Text>
-            <Text style={styles.feature}>• Gestão de produtos e estoque</Text>
-            <Text style={styles.feature}>• Sistema de vendas com PDV</Text>
-            <Text style={styles.feature}>• Cadastro de clientes e fidelidade</Text>
-            <Text style={styles.feature}>• Múltiplas formas de pagamento</Text>
-            <Text style={styles.feature}>• Relatórios e dashboard</Text>
-            <Text style={styles.feature}>• Backup e sincronização</Text>
-          </View>
-        </View>
-      </Card.Content>
-    </Card>
-  );
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Configurações</Text>
-      </View>
+      <Title style={styles.title}>Configurações</Title>
 
-      {renderBackupSection()}
-      {renderGeneralSettings()}
-      {renderDataManagement()}
-      {renderAboutSection()}
+      {/* Configurações PIX */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Title style={styles.cardTitle}>Configurações PIX</Title>
+          <Text style={styles.cardDescription}>
+            Configure suas informações PIX para receber pagamentos
+          </Text>
+
+          <Divider style={styles.divider} />
+
+          <TextInput
+            label="Chave PIX"
+            value={pixConfig.pixKey}
+            onChangeText={(text) => setPixConfig(prev => ({ ...prev, pixKey: text }))}
+            mode="outlined"
+            style={styles.input}
+            placeholder="exemplo@email.com"
+          />
+
+          <Text style={styles.label}>Tipo de Chave PIX:</Text>
+          <View style={styles.pixKeyTypes}>
+            {[
+              { value: 'email', label: 'Email' },
+              { value: 'cpf', label: 'CPF' },
+              { value: 'cnpj', label: 'CNPJ' },
+              { value: 'phone', label: 'Telefone' },
+              { value: 'random', label: 'Aleatória' }
+            ].map((type) => (
+              <Button
+                key={type.value}
+                mode={pixConfig.pixKeyType === type.value ? 'contained' : 'outlined'}
+                onPress={() => setPixConfig(prev => ({ ...prev, pixKeyType: type.value as any }))}
+                style={styles.pixKeyTypeButton}
+                compact
+              >
+                {type.label}
+              </Button>
+            ))}
+          </View>
+
+          <TextInput
+            label="Nome do Beneficiário"
+            value={pixConfig.beneficiaryName}
+            onChangeText={(text) => setPixConfig(prev => ({ ...prev, beneficiaryName: text }))}
+            mode="outlined"
+            style={styles.input}
+            placeholder="Nome da sua empresa"
+          />
+
+          <TextInput
+            label="Cidade do Beneficiário"
+            value={pixConfig.beneficiaryCity}
+            onChangeText={(text) => setPixConfig(prev => ({ ...prev, beneficiaryCity: text }))}
+            mode="outlined"
+            style={styles.input}
+            placeholder="SAO PAULO"
+          />
+
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="outlined"
+              onPress={testPixConfig}
+              style={styles.button}
+              icon="qrcode-scan"
+            >
+              Testar PIX
+            </Button>
+            
+            <Button
+              mode="contained"
+              onPress={savePixConfig}
+              loading={isLoading}
+              style={styles.button}
+              icon="content-save"
+            >
+              Salvar
+            </Button>
+          </View>
+        </Card.Content>
+      </Card>
+
+      {/* Configurações Gerais */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Title style={styles.cardTitle}>Configurações Gerais</Title>
+          
+          <List.Item
+            title="Modo Escuro"
+            description="Ativar tema escuro"
+            left={(props) => <List.Icon {...props} icon="theme-light-dark" />}
+            right={() => <Switch value={false} onValueChange={() => {}} />}
+          />
+          
+          <List.Item
+            title="Notificações"
+            description="Receber notificações de vendas"
+            left={(props) => <List.Icon {...props} icon="bell" />}
+            right={() => <Switch value={true} onValueChange={() => {}} />}
+          />
+          
+          <List.Item
+            title="Som de Venda"
+            description="Tocar som ao finalizar venda"
+            left={(props) => <List.Icon {...props} icon="volume-high" />}
+            right={() => <Switch value={true} onValueChange={() => {}} />}
+          />
+        </Card.Content>
+      </Card>
+
+      {/* Informações do Sistema */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Title style={styles.cardTitle}>Informações do Sistema</Title>
+          
+          <List.Item
+            title="Versão"
+            description="SmartPDV v1.0.0"
+            left={(props) => <List.Icon {...props} icon="information" />}
+          />
+          
+          <List.Item
+            title="Desenvolvedor"
+            description="SmartPDV Team"
+            left={(props) => <List.Icon {...props} icon="account-group" />}
+          />
+          
+          <List.Item
+            title="Suporte"
+            description="contato@smartpdv.com"
+            left={(props) => <List.Icon {...props} icon="email" />}
+          />
+        </Card.Content>
+      </Card>
+
+      {/* Backup e Sincronização */}
+      <Card style={styles.card}>
+        <Card.Content>
+          <Title style={styles.cardTitle}>Backup e Sincronização</Title>
+          <Text style={styles.cardDescription}>
+            Gerencie seus backups e sincronização na nuvem
+          </Text>
+          
+          <Button
+            mode="contained"
+            onPress={() => setShowBackupDialog(true)}
+            icon="backup-restore"
+            style={styles.button}
+          >
+            Gerenciar Backups
+          </Button>
+        </Card.Content>
+      </Card>
+
+      <BackupManagerDialog
+        visible={showBackupDialog}
+        onDismiss={() => setShowBackupDialog(false)}
+      />
     </ScrollView>
   );
 }
@@ -307,96 +246,55 @@ export default function ConfiguracoesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
     padding: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
+    backgroundColor: '#f6f6f6',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 20,
     color: '#333',
   },
-  section: {
-    margin: 16,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  card: {
     marginBottom: 16,
   },
-  sectionTitle: {
+  cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginLeft: 12,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  cardDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  divider: {
+    marginVertical: 16,
+  },
+  input: {
     marginBottom: 16,
   },
-  statItem: {
-    width: '50%',
-    marginBottom: 12,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  statValue: {
+  label: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: '#333',
+    marginBottom: 8,
+  },
+  pixKeyTypes: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  pixKeyTypeButton: {
+    marginBottom: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 8,
   },
   button: {
     flex: 1,
-    marginHorizontal: 4,
-    marginBottom: 8,
-  },
-  aboutContainer: {
-    alignItems: 'center',
-  },
-  appName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginBottom: 8,
-  },
-  appVersion: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
-  },
-  appDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  featuresList: {
-    alignSelf: 'stretch',
-  },
-  featuresTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  feature: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-    lineHeight: 20,
   },
 }); 

@@ -13,6 +13,7 @@ import {
     Text,
     Title
 } from 'react-native-paper';
+import PrintReceiptDialog from '../components/PrintReceiptDialog';
 import type { Sale } from '../src/database/salesService';
 import { salesDb } from '../src/database/salesService';
 
@@ -23,6 +24,7 @@ export default function RelatoriosScreen() {
   const [stats, setStats] = useState<any>(null);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [showSaleDetails, setShowSaleDetails] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -101,6 +103,11 @@ export default function RelatoriosScreen() {
   const handleViewSaleDetails = (sale: Sale) => {
     setSelectedSale(sale);
     setShowSaleDetails(true);
+  };
+
+  const handlePrintReceipt = (sale: Sale) => {
+    setSelectedSale(sale);
+    setShowPrintDialog(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -241,6 +248,17 @@ export default function RelatoriosScreen() {
         </Dialog.Content>
         <Dialog.Actions>
           <Button onPress={() => setShowSaleDetails(false)}>Fechar</Button>
+          {selectedSale && (
+            <Button 
+              onPress={() => {
+                setShowSaleDetails(false);
+                handlePrintReceipt(selectedSale);
+              }}
+              icon="printer"
+            >
+              Imprimir
+            </Button>
+          )}
         </Dialog.Actions>
       </Dialog>
     </Portal>
@@ -377,6 +395,11 @@ export default function RelatoriosScreen() {
                           onPress={() => handleViewSaleDetails(sale)}
                         />
                         <IconButton
+                          icon="printer"
+                          size={20}
+                          onPress={() => handlePrintReceipt(sale)}
+                        />
+                        <IconButton
                           icon="delete"
                           size={20}
                           onPress={() => handleDeleteSale(sale.id)}
@@ -414,6 +437,12 @@ export default function RelatoriosScreen() {
       </Card>
 
       {renderSaleDetails()}
+      
+      <PrintReceiptDialog
+        visible={showPrintDialog}
+        onDismiss={() => setShowPrintDialog(false)}
+        sale={selectedSale}
+      />
     </ScrollView>
   );
 }

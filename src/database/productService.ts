@@ -6,13 +6,18 @@ export interface Product {
   name: string;
   price: number;
   stock: number;
+  category?: string;
+  barcode?: string;
+  cost?: number;
+  minStock?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-// Versão para Web - usando localStorage como fallback
+// Versão para Web - usando localStorage
 const createWebDb = () => {
   const STORAGE_KEY = '@smartpdv_products';
   
-  // Carrega produtos do localStorage
   const loadProducts = (): Product[] => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -23,7 +28,6 @@ const createWebDb = () => {
     }
   };
 
-  // Salva produtos no localStorage
   const saveProducts = (products: Product[]): void => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
@@ -34,7 +38,6 @@ const createWebDb = () => {
 
   async function initDatabase(): Promise<void> {
     console.log("DB na Web: Inicializando com localStorage.");
-    // Garante que existe pelo menos um array vazio
     if (!localStorage.getItem(STORAGE_KEY)) {
       saveProducts([]);
     }
@@ -49,14 +52,53 @@ const createWebDb = () => {
     console.log("DB na Web: Adicionando produto via localStorage.", product);
     const products = loadProducts();
     const newProduct: Product = {
-      id: Date.now(), // Usa timestamp como ID único
-      ...product
+      id: Date.now(),
+      ...product,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     products.push(newProduct);
     saveProducts(products);
   }
 
-  return { initDatabase, getAllProducts, addProduct };
+  async function updateProduct(id: number, product: Partial<Product>): Promise<void> {
+    const products = loadProducts();
+    const index = products.findIndex(p => p.id === id);
+    if (index !== -1) {
+      products[index] = { ...products[index], ...product, updatedAt: new Date() };
+      saveProducts(products);
+    }
+  }
+
+  async function deleteProduct(id: number): Promise<void> {
+    const products = loadProducts();
+    const filtered = products.filter(p => p.id !== id);
+    saveProducts(filtered);
+  }
+
+  async function getProductById(id: number): Promise<Product | null> {
+    const products = loadProducts();
+    return products.find(p => p.id === id) || null;
+  }
+
+  async function searchProducts(query: string): Promise<Product[]> {
+    const products = loadProducts();
+    const lowerQuery = query.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(lowerQuery) ||
+      (p.barcode && p.barcode.includes(query))
+    );
+  }
+
+  return { 
+    initDatabase, 
+    getAllProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    getProductById,
+    searchProducts
+  };
 };
 
 // Versão para Nativo (Android/iOS) - usando AsyncStorage
@@ -103,13 +145,52 @@ const createNativeDb = () => {
     const products = await loadProducts();
     const newProduct: Product = {
       id: Date.now(),
-      ...product
+      ...product,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     products.push(newProduct);
     await saveProducts(products);
   }
-  
-  return { initDatabase, getAllProducts, addProduct };
+
+  async function updateProduct(id: number, product: Partial<Product>): Promise<void> {
+    const products = await loadProducts();
+    const index = products.findIndex(p => p.id === id);
+    if (index !== -1) {
+      products[index] = { ...products[index], ...product, updatedAt: new Date() };
+      await saveProducts(products);
+    }
+  }
+
+  async function deleteProduct(id: number): Promise<void> {
+    const products = await loadProducts();
+    const filtered = products.filter(p => p.id !== id);
+    await saveProducts(filtered);
+  }
+
+  async function getProductById(id: number): Promise<Product | null> {
+    const products = await loadProducts();
+    return products.find(p => p.id === id) || null;
+  }
+
+  async function searchProducts(query: string): Promise<Product[]> {
+    const products = await loadProducts();
+    const lowerQuery = query.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(lowerQuery) ||
+      (p.barcode && p.barcode.includes(query))
+    );
+  }
+
+  return { 
+    initDatabase, 
+    getAllProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    getProductById,
+    searchProducts
+  };
 };
 
 // Exporta a versão correta baseada na plataforma
