@@ -362,3 +362,51 @@ npx expo export --platform web --dump-assetmap
 ---
 
 **SmartPDV Team** - Sistema Inteligente de Ponto de Venda 
+
+Você está tentando rodar o app no modo **development build** do Expo, mas ainda não instalou o app de desenvolvimento no seu celular. Por isso aparece o erro:
+
+```
+No development build (com.fireblue17.SmartPDV) for this project is installed. Install a development build on the target device and try again.
+```
+
+## Como testar no celular via USB (Expo Development Build)
+
+### 1. Gere o APK de desenvolvimento
+
+No terminal, rode:
+```sh
+npx eas build --platform android --profile development
+```
+Isso vai gerar um APK de desenvolvimento (com todos os módulos nativos).
+
+### 2. Baixe o APK gerado
+
+- Quando o build terminar, o terminal vai mostrar um link para baixar o APK.
+- Baixe o APK no seu computador.
+
+### 3. Instale o APK no seu celular
+
+- Conecte o celular via USB (com depuração USB ativada).
+- Rode:
+  ```sh
+  adb install caminho/para/o/apk-baixado.apk
+  ```
+  Ou transfira o APK para o celular e instale manualmente.
+
+### 4. Abra o app "SmartPDV" no celular
+
+- Agora, com o Metro Bundler rodando (`npm start`), o app vai se conectar ao seu servidor local.
+- Você pode rodar normalmente, inclusive com recursos nativos.
+
+---
+
+## Alternativa: Expo Go (sem recursos nativos customizados)
+
+Se você não precisa testar módulos nativos customizados, pode simplesmente:
+- Instalar o app **Expo Go** no seu celular.
+- Rodar `npm start` no PC.
+- Escanear o QR code com o Expo Go.
+
+---
+
+Se quiser, posso te guiar passo a passo em qualquer um dos métodos! Qual você prefere seguir? 

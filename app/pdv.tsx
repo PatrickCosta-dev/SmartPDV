@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import {
-    Button,
-    Card,
-    Dialog,
-    Divider,
-    IconButton,
-    Portal,
-    Searchbar,
-    SegmentedButtons,
-    Text,
-    TextInput
+  Button,
+  Card,
+  Dialog,
+  Divider,
+  IconButton,
+  Portal,
+  Searchbar,
+  SegmentedButtons,
+  Text,
+  TextInput
 } from 'react-native-paper';
 import ItemDiscountDialog from '../components/ItemDiscountDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
@@ -35,7 +35,7 @@ export default function PDVScreen() {
   const [discountInput, setDiscountInput] = useState('');
   const [discountPercentInput, setDiscountPercentInput] = useState('');
   const [couponCodeInput, setCouponCodeInput] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('money');
+  const [paymentMethod, setPaymentMethod] = useState('dinheiro');
   const [selectedItem, setSelectedItem] = useState<CartItem | null>(null);
   const [lastSale, setLastSale] = useState<any>(null);
   
@@ -183,7 +183,7 @@ export default function PDVScreen() {
       setDiscountInput('');
       setDiscountPercentInput('');
       setCouponCodeInput('');
-      setPaymentMethod('money');
+      setPaymentMethod('dinheiro');
       setDiscount(0);
       setDiscountPercent(0);
       
@@ -209,7 +209,7 @@ export default function PDVScreen() {
     }
   };
 
-  const handlePixPaymentSuccess = (payment: any) => {
+  const handlePixPaymentSuccess = () => {
     setShowPixDialog(false);
     Alert.alert(
       'Pagamento Confirmado!',
@@ -539,8 +539,9 @@ export default function PDVScreen() {
       <PixPaymentDialog
         visible={showPixDialog}
         onDismiss={() => setShowPixDialog(false)}
-        sale={lastSale}
+        amount={lastSale?.finalTotal || 0}
         onPaymentSuccess={handlePixPaymentSuccess}
+        onPaymentError={(error) => Alert.alert('Erro', error)}
       />
     </View>
   );

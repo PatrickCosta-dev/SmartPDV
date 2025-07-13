@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SmartPDV",
-    "slug": "SmartPDV",
+    "slug": "smartpdv",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -42,8 +42,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9e74b9f3-3218-48f0-aadd-383bd7dc59db"
+        "projectId": "ea41d495-2278-4a19-966d-b6dfa6b45c5e"
       }
-    }
+    },
+    "owner": "fireblue17"
   }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, View } from 'react-native';
 import {
     ActivityIndicator,
     Button,
@@ -9,12 +9,12 @@ import {
     Text,
 } from 'react-native-paper';
 import { AnalyticsService } from '../src/services/analyticsService';
-import { PixData, PixService } from '../src/services/pixService';
+import { PixService } from '../src/services/pixService';
 
 interface PixPaymentDialogProps {
   visible: boolean;
   onDismiss: () => void;
-  amount: number;
+  amount: number | undefined;
   onPaymentSuccess: () => void;
   onPaymentError: (error: string) => void;
 }
@@ -33,7 +33,7 @@ export default function PixPaymentDialog({
   const [transactionId, setTransactionId] = useState<string>('');
 
   useEffect(() => {
-    if (visible && amount > 0) {
+    if (visible && amount && amount > 0) {
       generatePixQRCode();
     }
   }, [visible, amount]);
@@ -41,31 +41,39 @@ export default function PixPaymentDialog({
   const generatePixQRCode = async () => {
     setLoading(true);
     try {
-      const pixConfig: PixData = {
-        key: 'smartpdv@exemplo.com', // Em produção, seria a chave real
-        keyType: 'email',
-        merchantName: 'SmartPDV Store',
-        merchantCity: 'SAO PAULO',
-        amount: amount,
-        description: `Pagamento SmartPDV - R$ ${amount.toFixed(2)}`,
-        transactionId: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      };
+      // Valida se as configurações PIX estão definidas
+      const config = await PixService.loadConfig();
+      
+      if (!config.pixKey || !config.beneficiaryName || !config.beneficiaryCity) {
+        onPaymentError('Configurações PIX incompletas. Configure na tela de configurações.');
+        return;
+      }
 
-      const qrCodeResult = await PixService.generatePixQRCode(pixConfig);
+      // Valida a chave PIX
+      if (!PixService.validatePixKey(config.pixKey, config.pixKeyType)) {
+        onPaymentError('Chave PIX inválida. Verifique as configurações PIX.');
+        return;
+      }
+
+      const qrCodeResult = await PixService.generatePixQRCodeWithConfig(
+        amount || 0,
+        `Pagamento SmartPDV - R$ ${(amount || 0).toFixed(2)}`
+      );
+      
       setQrCodeImage(qrCodeResult.qrCodeImage);
       setPixData(qrCodeResult.copyAndPaste);
-      setTransactionId(pixConfig.transactionId || '');
+      setTransactionId(`txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
       // Registra evento de analytics
       await AnalyticsService.logPaymentMethodUsed({
         method: 'PIX',
-        amount: amount,
+        amount: amount || 0,
         success: true
       });
 
     } catch (error) {
       console.error('Erro ao gerar QR Code PIX:', error);
-      onPaymentError('Erro ao gerar QR Code PIX');
+      onPaymentError('Erro ao gerar QR Code PIX. Verifique as configurações PIX.');
     } finally {
       setLoading(false);
     }
@@ -81,7 +89,7 @@ export default function PixPaymentDialog({
       if (result.status === 'completed') {
         Alert.alert(
           'Pagamento Confirmado!',
-          `Pagamento de R$ ${amount.toFixed(2)} foi confirmado com sucesso.`,
+          `Pagamento de R$ ${(amount || 0).toFixed(2)} foi confirmado com sucesso.`,
           [
             {
               text: 'OK',
@@ -96,7 +104,7 @@ export default function PixPaymentDialog({
         // Registra evento de sucesso
         await AnalyticsService.logPaymentMethodUsed({
           method: 'PIX',
-          amount: amount,
+          amount: amount || 0,
           success: true
         });
       } else if (result.status === 'failed') {
@@ -108,7 +116,7 @@ export default function PixPaymentDialog({
 
         await AnalyticsService.logPaymentMethodUsed({
           method: 'PIX',
-          amount: amount,
+          amount: amount || 0,
           success: false,
           errorMessage: 'Payment failed'
         });
@@ -146,7 +154,7 @@ export default function PixPaymentDialog({
             <Card style={styles.card}>
               <Card.Content>
                 <Text variant="titleMedium" style={styles.amount}>
-                  R$ {amount.toFixed(2)}
+                  R$ {(amount || 0).toFixed(2)}
                 </Text>
                 
                 {loading ? (
@@ -162,15 +170,11 @@ export default function PixPaymentDialog({
                           Escaneie o QR Code com seu app bancário:
                         </Text>
                         <View style={styles.qrCodeImageContainer}>
-                          {/* Em produção, você usaria uma biblioteca de imagem */}
-                          <View style={styles.qrCodePlaceholder}>
-                            <Text style={styles.qrCodePlaceholderText}>
-                              QR Code PIX
-                            </Text>
-                            <Text style={styles.qrCodePlaceholderSubtext}>
-                              {pixData.substring(0, 50)}...
-                            </Text>
-                          </View>
+                          <Image 
+                            source={{ uri: qrCodeImage }} 
+                            style={styles.qrCodeImage}
+                            resizeMode="contain"
+                          />
                         </View>
                       </View>
                     )}
@@ -200,7 +204,8 @@ export default function PixPaymentDialog({
                       • Abra seu app bancário{'\n'}
                       • Escaneie o QR Code ou cole os dados PIX{'\n'}
                       • Confirme o pagamento{'\n'}
-                      • Clique em "Verificar Pagamento" após confirmar
+                      • Clique em "Verificar Pagamento" após confirmar{'\n\n'}
+                      💡 Dica: Configure suas informações PIX na tela de configurações para gerar QR Codes válidos.
                     </Text>
                   </>
                 )}
@@ -248,26 +253,9 @@ const styles = StyleSheet.create({
   qrCodeImageContainer: {
     alignItems: 'center',
   },
-  qrCodePlaceholder: {
+  qrCodeImage: {
     width: 200,
     height: 200,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 10,
-  },
-  qrCodePlaceholderText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
-  },
-  qrCodePlaceholderSubtext: {
-    fontSize: 10,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 5,
   },
   buttonContainer: {
     gap: 10,

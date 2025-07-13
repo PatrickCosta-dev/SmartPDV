@@ -7,6 +7,9 @@ import React, { useEffect } from 'react';
 import { PaperProvider } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+// Logger
+import log from './src/utils/logger';
+
 // Telas
 import CustomersScreen from './app/clientes'; // Tela de clientes
 import ConfiguracoesScreen from './app/configuracoes'; // Tela de configurações
@@ -55,9 +58,9 @@ export default function App() {
     async function initializeDb() {
       try {
         await initDatabase();
-        console.log('Banco de dados inicializado!');
+        log.info('Banco de dados inicializado com sucesso!');
       } catch (e) {
-        console.error('Falha ao inicializar o banco de dados', e);
+        log.error('Falha ao inicializar o banco de dados:', e);
       }
     }
     initializeDb();
