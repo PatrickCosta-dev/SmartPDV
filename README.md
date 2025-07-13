@@ -250,6 +250,7 @@ Para suporte e dúvidas:
 ---
 
 **SmartPDV** - Transformando a gestão do seu negócio! 🚀
+<<<<<<< HEAD
 
 ## 📋 **Resumo dos Próximos Passos**
 
@@ -369,3 +370,5 @@ npx expo install expo-analytics
 5. **Teste em dispositivos reais** - Valide em Android/iOS físicos
 
 O SmartPDV está em excelente estado! Você tem um sistema robusto e funcional. Os próximos passos focam em **polimento, deploy e funcionalidades avançadas** para levar o produto ao mercado.
+=======
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220

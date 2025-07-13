@@ -14,7 +14,11 @@ describe('formatCurrency', () => {
   it('deve formatar número para dólar', () => {
     const result = formatCurrency(1234.56, 'USD');
     expect(result).toMatch(/\$/);
+<<<<<<< HEAD
     expect(result).toMatch(/1\.234,56/);
+=======
+    expect(result).toMatch(/1,234\.56/);
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
   });
 
   it('deve formatar zero corretamente', () => {

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
@@ -21,6 +22,30 @@ export default function ConfiguracoesScreen() {
     pixKeyType: 'email',
     beneficiaryName: '',
     beneficiaryCity: ''
+=======
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import {
+    Button,
+    Card,
+    Divider,
+    List,
+    Switch,
+    Text,
+    TextInput,
+    Title
+} from 'react-native-paper';
+import BackupManagerDialog from '../components/BackupManagerDialog';
+import type { PixConfig } from '../src/services/pixService';
+import { pixService } from '../src/services/pixService';
+
+export default function ConfiguracoesScreen() {
+  const [pixConfig, setPixConfig] = useState<PixConfig>({
+    pixKey: 'smartpdv@exemplo.com',
+    pixKeyType: 'email',
+    beneficiaryName: 'SmartPDV Store',
+    beneficiaryCity: 'SAO PAULO'
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +57,7 @@ export default function ConfiguracoesScreen() {
 
   const loadPixConfig = async () => {
     try {
+<<<<<<< HEAD
       console.log('Carregando configurações PIX...');
       const config = await PixService.loadConfig();
       console.log('Configurações PIX carregadas:', config);
@@ -40,12 +66,19 @@ export default function ConfiguracoesScreen() {
       console.error('Erro ao carregar configurações PIX:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       Alert.alert('Erro', `Não foi possível carregar as configurações PIX: ${errorMessage}`);
+=======
+      // Em uma implementação real, carregaria do storage
+      // Por enquanto, usa os valores padrão
+    } catch (error) {
+      console.error('Erro ao carregar configurações PIX:', error);
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
     }
   };
 
   const savePixConfig = async () => {
     setIsLoading(true);
     try {
+<<<<<<< HEAD
       // Validação das configurações
       if (!pixConfig.pixKey || !pixConfig.pixKey.trim()) {
         Alert.alert('Erro', 'A chave PIX é obrigatória');
@@ -75,6 +108,13 @@ export default function ConfiguracoesScreen() {
       console.error('Erro ao salvar configurações PIX:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       Alert.alert('Erro', `Não foi possível salvar as configurações PIX: ${errorMessage}`);
+=======
+      pixService.setConfig(pixConfig);
+      Alert.alert('Sucesso', 'Configurações PIX salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar configurações PIX:', error);
+      Alert.alert('Erro', 'Não foi possível salvar as configurações PIX.');
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
     } finally {
       setIsLoading(false);
     }
@@ -82,10 +122,31 @@ export default function ConfiguracoesScreen() {
 
   const testPixConfig = async () => {
     try {
+<<<<<<< HEAD
       const result = await PixService.generatePixQRCodeWithConfig(10.00, 'Teste PIX');
       Alert.alert(
         'Teste PIX',
         `QR Code gerado com sucesso!\n\nChave: ${pixConfig.pixKey}\nValor: R$ 10,00\n\nDados PIX: ${result.qrCodeData.substring(0, 100)}...`
+=======
+      // Simula uma venda de teste
+      const testSale = {
+        id: 'test_001',
+        items: [{ id: 1, name: 'Produto Teste', price: 10.00, quantity: 1 }],
+        subtotal: 10.00,
+        total: 10.00,
+        discount: 0,
+        finalTotal: 10.00,
+        paymentMethod: 'pix',
+        date: new Date().toISOString(),
+        customerName: 'Cliente Teste',
+        notes: 'Venda de teste'
+      };
+
+      const payment = await pixService.generatePixPayment(testSale);
+      Alert.alert(
+        'Teste PIX',
+        `QR Code gerado com sucesso!\n\nChave: ${payment.pixKey}\nValor: R$ ${payment.amount.toFixed(2)}\n\nID do Pagamento: ${payment.id}`
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
       );
     } catch (error) {
       console.error('Erro no teste PIX:', error);
@@ -93,6 +154,7 @@ export default function ConfiguracoesScreen() {
     }
   };
 
+<<<<<<< HEAD
   const clearPixConfig = async () => {
     try {
       await AsyncStorage.removeItem('@smartpdv_pix_config');
@@ -129,6 +191,8 @@ export default function ConfiguracoesScreen() {
     }
   };
 
+=======
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
   return (
     <ScrollView style={styles.container}>
       <Title style={styles.title}>Configurações</Title>
@@ -211,6 +275,7 @@ export default function ConfiguracoesScreen() {
               Salvar
             </Button>
           </View>
+<<<<<<< HEAD
 
           <View style={styles.buttonContainer}>
             <Button
@@ -246,6 +311,8 @@ export default function ConfiguracoesScreen() {
             Teste a funcionalidade PIX
           </Text>
           <PixTest />
+=======
+>>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
         </Card.Content>
       </Card>
 
