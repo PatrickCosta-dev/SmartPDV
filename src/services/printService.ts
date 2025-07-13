@@ -1,41 +1,5 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { Platform } from 'react-native';
-<<<<<<< HEAD
-
-export interface SaleReceipt {
-  id: string;
-  date: string;
-  items: Array<{
-    name: string;
-    quantity: number;
-    price: number;
-    total: number;
-  }>;
-  subtotal: number;
-  discount: number;
-  total: number;
-  paymentMethod: string;
-  customerName?: string;
-}
-
-export class PrintService {
-  static async generateReceiptHTML(receipt: SaleReceipt): Promise<string> {
-    const itemsHTML = receipt.items
-      .map(
-        (item) => `
-        <tr>
-          <td>${item.name}</td>
-          <td>${item.quantity}</td>
-          <td>R$ ${item.price.toFixed(2)}</td>
-          <td>R$ ${item.total.toFixed(2)}</td>
-        </tr>
-      `
-      )
-      .join('');
-
-    const html = `
-=======
 import type { Sale } from '../database/salesService';
 
 export interface PrintOptions {
@@ -157,7 +121,6 @@ class PrintService {
     const paperWidth = options.paperSize === '80mm' ? '80mm' : options.paperSize === '58mm' ? '58mm' : '210mm';
 
     return `
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
       <!DOCTYPE html>
       <html>
         <head>
@@ -166,55 +129,6 @@ class PrintService {
           <style>
             body {
               font-family: 'Courier New', monospace;
-<<<<<<< HEAD
-              font-size: 12px;
-              margin: 0;
-              padding: 20px;
-              background: white;
-            }
-            .header {
-              text-align: center;
-              border-bottom: 2px solid #000;
-              padding-bottom: 10px;
-              margin-bottom: 20px;
-            }
-            .title {
-              font-size: 18px;
-              font-weight: bold;
-              margin: 0;
-            }
-            .info {
-              margin: 10px 0;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f0f0f0;
-              font-weight: bold;
-            }
-            .totals {
-              margin-top: 20px;
-              text-align: right;
-            }
-            .total-row {
-              font-weight: bold;
-              font-size: 14px;
-            }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              font-size: 10px;
-              border-top: 1px solid #000;
-              padding-top: 10px;
-=======
               margin: 0;
               padding: 10px;
               font-size: 12px;
@@ -248,142 +162,32 @@ class PrintService {
             .final-total {
               font-weight: bold;
               font-size: 14px;
-              border-top: 1px solid #333;
-              padding-top: 5px;
-            }
-            .customer-info {
-              margin-bottom: 15px;
-              padding: 10px;
-              background: #f9f9f9;
-              border-radius: 5px;
-            }
-            .payment-info {
-              margin-bottom: 15px;
-              padding: 10px;
-              background: #f0f8ff;
-              border-radius: 5px;
-            }
-            @media print {
-              body { margin: 0; }
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
             }
           </style>
         </head>
         <body>
-<<<<<<< HEAD
-          <div class="header">
-            <h1 class="title">SmartPDV</h1>
-            <p>Sistema de Ponto de Venda</p>
-          </div>
-          
-          <div class="info">
-            <strong>Venda #${receipt.id}</strong><br>
-            <strong>Data:</strong> ${receipt.date}<br>
-            ${receipt.customerName ? `<strong>Cliente:</strong> ${receipt.customerName}<br>` : ''}
-            <strong>Forma de Pagamento:</strong> ${receipt.paymentMethod}
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>Qtd</th>
-                <th>Preço</th>
-                <th>Total</th>
-=======
           ${logoHTML}
-          
           <div class="header">
-            <h2 style="margin: 0; font-size: 16px;">COMPROVANTE DE VENDA</h2>
-            <div style="font-size: 12px; color: #666;">
-              Venda #${sale.id}
-            </div>
-            <div style="font-size: 12px; color: #666;">
-              ${formatDate(sale.date)}
-            </div>
+            <div style="font-size: 16px; font-weight: bold;">Comprovante de Venda</div>
+            <div style="font-size: 12px;">${formatDate(sale.date)}</div>
+            <div style="font-size: 12px;">${company.name}</div>
           </div>
-
-          ${sale.customerName ? `
-            <div class="customer-info">
-              <strong>Cliente:</strong> ${sale.customerName}
-            </div>
-          ` : ''}
-
-          <div class="payment-info">
-            <strong>Forma de Pagamento:</strong> ${getPaymentMethodName(sale.paymentMethod)}
-            ${sale.appliedCoupon ? `
-              <br><strong>Cupom:</strong> ${sale.appliedCoupon.code} 
-              (${sale.appliedCoupon.type === 'percentage' ? 
-                `${sale.appliedCoupon.value}%` : 
-                `R$ ${sale.appliedCoupon.value.toFixed(2)}`})
-            ` : ''}
+          <div class="sale-info">
+            <div>ID da Venda: <strong>${sale.id}</strong></div>
+            ${sale.customerName ? `<div>Cliente: <strong>${sale.customerName}</strong></div>` : ''}
+            <div>Método de Pagamento: <strong>${getPaymentMethodName(sale.paymentMethod)}</strong></div>
           </div>
-
           <table class="items-table">
-            <thead>
-              <tr style="border-bottom: 2px solid #333;">
-                <th style="text-align: left; padding: 5px 0;">ITEM</th>
-                <th style="text-align: right; padding: 5px 0;">VALOR</th>
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
-              </tr>
-            </thead>
             <tbody>
               ${itemsHTML}
             </tbody>
           </table>
-<<<<<<< HEAD
-          
           <div class="totals">
-            <div>Subtotal: R$ ${receipt.subtotal.toFixed(2)}</div>
-            ${receipt.discount > 0 ? `<div>Desconto: -R$ ${receipt.discount.toFixed(2)}</div>` : ''}
-            <div class="total-row">Total: R$ ${receipt.total.toFixed(2)}</div>
+            <div class="total-row">Subtotal: <span>${formatCurrency(sale.subtotal)}</span></div>
+            <div class="total-row">Desconto: <span>- ${formatCurrency(sale.discount)}</span></div>
+            <div class="total-row final-total">Total: <span>${formatCurrency(sale.finalTotal)}</span></div>
           </div>
-          
-          <div class="footer">
-            <p>Obrigado pela preferência!</p>
-            <p>SmartPDV - Sistema Inteligente de Vendas</p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return html;
-  }
-
-  static async printReceipt(receipt: SaleReceipt): Promise<void> {
-    try {
-      const html = await this.generateReceiptHTML(receipt);
-      
-      if (Platform.OS === 'web') {
-        // Para web, abrir em nova aba
-=======
-
-          <div class="totals">
-            <div class="total-row">
-              <span>Subtotal:</span>
-              <span>${formatCurrency(sale.subtotal)}</span>
-            </div>
-            ${sale.discount > 0 ? `
-              <div class="total-row">
-                <span>Descontos:</span>
-                <span>-${formatCurrency(sale.discount)}</span>
-              </div>
-            ` : ''}
-            <div class="total-row final-total">
-              <span>TOTAL:</span>
-              <span>${formatCurrency(sale.finalTotal)}</span>
-            </div>
-          </div>
-
           ${qrCodeHTML}
-
-          ${sale.notes ? `
-            <div style="margin: 15px 0; padding: 10px; background: #fff3cd; border-radius: 5px; font-size: 11px;">
-              <strong>Observações:</strong><br>
-              ${sale.notes}
-            </div>
-          ` : ''}
-
           ${footerHTML}
         </body>
       </html>
@@ -393,130 +197,19 @@ class PrintService {
   /**
    * Imprime o comprovante
    */
-  async printReceipt(data: ReceiptData): Promise<boolean> {
-    try {
-      const html = this.generateReceiptHTML(data);
-      
-      if (Platform.OS === 'web') {
-        // Para web, abre em nova aba
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(html);
-          printWindow.document.close();
-          printWindow.print();
-<<<<<<< HEAD
-        }
-      } else {
-        // Para mobile, usar expo-print
-=======
-          return true;
-        }
-        return false;
-      } else {
-        // Para mobile, usa expo-print
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
-        const { uri } = await Print.printToFileAsync({ html });
-        
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'application/pdf',
-<<<<<<< HEAD
-            dialogTitle: 'Comprovante de Venda',
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao imprimir comprovante:', error);
-      throw new Error('Falha ao gerar comprovante');
-    }
-  }
-
-  static async generatePDF(receipt: SaleReceipt): Promise<string> {
-    try {
-      const html = await this.generateReceiptHTML(receipt);
-=======
-            dialogTitle: 'Comprovante de Venda'
-          });
-        }
-        
-        return true;
-      }
-    } catch (error) {
-      console.error('Erro ao imprimir comprovante:', error);
-      return false;
-    }
+  async printReceipt(data: ReceiptData) {
+    const html = this.generateReceiptHTML(data);
+    await Print.printAsync({ html });
   }
 
   /**
-   * Gera PDF do comprovante
+   * Compartilha o comprovante em PDF
    */
-  async generateReceiptPDF(data: ReceiptData): Promise<string | null> {
-    try {
-      const html = this.generateReceiptHTML(data);
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
-      const { uri } = await Print.printToFileAsync({ html });
-      return uri;
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-<<<<<<< HEAD
-      throw new Error('Falha ao gerar PDF');
-    }
-  }
-} 
-=======
-      return null;
-    }
-  }
-
-  /**
-   * Compartilha o comprovante
-   */
-  async shareReceipt(data: ReceiptData): Promise<boolean> {
-    try {
-      const pdfUri = await this.generateReceiptPDF(data);
-      if (pdfUri && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(pdfUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Compartilhar Comprovante'
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Erro ao compartilhar comprovante:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Envia comprovante por email (simulado)
-   */
-  async emailReceipt(data: ReceiptData, email: string): Promise<boolean> {
-    try {
-      const pdfUri = await this.generateReceiptPDF(data);
-      if (pdfUri && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(pdfUri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Enviar por Email',
-          UTI: 'com.adobe.pdf'
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Configura informações da empresa
-   */
-  updateCompanyInfo(companyInfo: Partial<ReceiptData['companyInfo']>): void {
-    this.defaultCompanyInfo = { ...this.defaultCompanyInfo, ...companyInfo };
+  async shareReceipt(data: ReceiptData) {
+    const html = this.generateReceiptHTML(data);
+    const { uri } = await Print.printToFileAsync({ html });
+    await Sharing.shareAsync(uri);
   }
 }
 
-export const printService = new PrintService(); 
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
+export const printService = new PrintService();

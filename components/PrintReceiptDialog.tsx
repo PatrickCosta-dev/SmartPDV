@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Modal,
@@ -12,6 +12,7 @@ import {
 import { Button, Card, Checkbox, Divider } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { Sale } from '../src/database/salesService';
+import { PixService } from '../src/services/pixService';
 import { printService, type PrintOptions, type ReceiptData } from '../src/services/printService';
 
 interface PrintReceiptDialogProps {
@@ -43,6 +44,23 @@ export default function PrintReceiptDialog({
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [pixConfig, setPixConfig] = useState<any>(null);
+
+  // Carrega as configurações PIX quando o componente é montado
+  useEffect(() => {
+    const loadPixConfig = async () => {
+      try {
+        const config = await PixService.loadConfig();
+        setPixConfig(config);
+      } catch (error) {
+        console.error('Erro ao carregar configurações PIX:', error);
+      }
+    };
+
+    if (visible) {
+      loadPixConfig();
+    }
+  }, [visible]);
 
   const handlePrint = async () => {
     if (!sale) return;
@@ -52,23 +70,18 @@ export default function PrintReceiptDialog({
       const receiptData: ReceiptData = {
         sale,
         companyInfo: companyInfo || {
-          name: 'SmartPDV Store',
+          name: pixConfig?.beneficiaryName || 'SmartPDV Store',
           address: 'Rua das Flores, 123 - Centro',
           phone: '(11) 99999-9999',
-          cnpj: '12.345.678/0001-90',
+          cnpj: pixConfig ? PixService.formatCNPJ(pixConfig.pixKey) : '12.345.678/0001-90',
           website: 'www.smartpdv.com'
         },
         printOptions
       };
 
-      const success = await printService.printReceipt(receiptData);
-      
-      if (success) {
-        Alert.alert('Sucesso', 'Comprovante enviado para impressão!');
-        onDismiss();
-      } else {
-        Alert.alert('Erro', 'Não foi possível imprimir o comprovante.');
-      }
+      await printService.printReceipt(receiptData);
+      Alert.alert('Sucesso', 'Comprovante enviado para impressão!');
+      onDismiss();
     } catch (error) {
       console.error('Erro ao imprimir:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao imprimir o comprovante.');
@@ -85,23 +98,18 @@ export default function PrintReceiptDialog({
       const receiptData: ReceiptData = {
         sale,
         companyInfo: companyInfo || {
-          name: 'SmartPDV Store',
+          name: pixConfig?.beneficiaryName || 'SmartPDV Store',
           address: 'Rua das Flores, 123 - Centro',
           phone: '(11) 99999-9999',
-          cnpj: '12.345.678/0001-90',
+          cnpj: pixConfig ? PixService.formatCNPJ(pixConfig.pixKey) : '12.345.678/0001-90',
           website: 'www.smartpdv.com'
         },
         printOptions
       };
 
-      const success = await printService.shareReceipt(receiptData);
-      
-      if (success) {
-        Alert.alert('Sucesso', 'Comprovante compartilhado!');
-        onDismiss();
-      } else {
-        Alert.alert('Erro', 'Não foi possível compartilhar o comprovante.');
-      }
+      await printService.shareReceipt(receiptData);
+      Alert.alert('Sucesso', 'Comprovante compartilhado!');
+      onDismiss();
     } catch (error) {
       console.error('Erro ao compartilhar:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao compartilhar o comprovante.');
@@ -116,35 +124,7 @@ export default function PrintReceiptDialog({
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const receiptData: ReceiptData = {
-        sale,
-        companyInfo: companyInfo || {
-          name: 'SmartPDV Store',
-          address: 'Rua das Flores, 123 - Centro',
-          phone: '(11) 99999-9999',
-          cnpj: '12.345.678/0001-90',
-          website: 'www.smartpdv.com'
-        },
-        printOptions
-      };
-
-      const success = await printService.emailReceipt(receiptData, email);
-      
-      if (success) {
-        Alert.alert('Sucesso', 'Comprovante enviado por email!');
-        setEmail('');
-        onDismiss();
-      } else {
-        Alert.alert('Erro', 'Não foi possível enviar o email.');
-      }
-    } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao enviar o email.');
-    } finally {
-      setIsLoading(false);
-    }
+    Alert.alert('Funcionalidade em Desenvolvimento', 'O envio por email será implementado em breve.');
   };
 
   const updatePrintOption = (key: keyof PrintOptions, value: any) => {
@@ -179,6 +159,28 @@ export default function PrintReceiptDialog({
                 </Text>
                 <Text style={styles.saleInfo}>
                   Cliente: {sale.customerName || 'Não informado'}
+                </Text>
+              </Card.Content>
+            </Card>
+
+            {/* Informações da Empresa */}
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.cardTitle}>Informações da Empresa</Text>
+                <Text style={styles.saleInfo}>
+                  Nome: {pixConfig?.beneficiaryName || 'SmartPDV Store'}
+                </Text>
+                <Text style={styles.saleInfo}>
+                  CNPJ: {pixConfig ? PixService.formatCNPJ(pixConfig.pixKey) : '12.345.678/0001-90'}
+                </Text>
+                <Text style={styles.saleInfo}>
+                  Cidade: {pixConfig?.beneficiaryCity || 'SAO PAULO'}
+                </Text>
+                <Text style={styles.saleInfo}>
+                  Endereço: Rua das Flores, 123 - Centro
+                </Text>
+                <Text style={styles.saleInfo}>
+                  Telefone: (11) 99999-9999
                 </Text>
               </Card.Content>
             </Card>

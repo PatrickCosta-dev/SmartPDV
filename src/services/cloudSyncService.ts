@@ -4,7 +4,7 @@ import * as Sharing from 'expo-sharing';
 import type { Customer } from '../database/customerService';
 import type { Product } from '../database/productService';
 import type { Sale } from '../database/salesService';
-import type { PixPaymentData } from './pixService';
+// Removido PixPaymentData pois não é mais exportado
 
 export interface CloudBackup {
   id: string;
@@ -16,7 +16,7 @@ export interface CloudBackup {
     products: Product[];
     sales: Sale[];
     customers: Customer[];
-    pixPayments: PixPaymentData[];
+    pixPayments: any[]; // Temporariamente any até refatorar
     settings: any;
   };
   checksum: string;
@@ -132,7 +132,7 @@ class CloudSyncService {
       const { db: productDb } = await import('../database/productService');
       const { salesDb } = await import('../database/salesService');
       const { customerService } = await import('../database/customerService');
-      const { pixService } = await import('./pixService');
+      // const { pixService } = await import('./pixService'); // Temporariamente comentado
 
       // Inicializa os bancos
       await productDb.initDatabase();
@@ -143,13 +143,13 @@ class CloudSyncService {
       const products = await productDb.getAllProducts();
       const sales = await salesDb.getAllSales();
       const customers = await customerService.getAllCustomers();
-      const pixPayments = await pixService.getAllPayments();
+      const pixPayments: any[] = []; // Temporariamente vazio até refatorar
       
       // Configurações (simuladas)
       const settings = {
         pixConfig: {
-          pixKey: 'smartpdv@exemplo.com',
-          pixKeyType: 'email',
+          pixKey: '12345678000199',
+          pixKeyType: 'cnpj',
           beneficiaryName: 'SmartPDV Store',
           beneficiaryCity: 'SAO PAULO'
         },
@@ -267,7 +267,7 @@ class CloudSyncService {
       const { db: productDb } = await import('../database/productService');
       const { salesDb } = await import('../database/salesService');
       const { customerService } = await import('../database/customerService');
-      const { pixService } = await import('./pixService');
+      // const { pixService } = await import('./pixService'); // Temporariamente comentado
 
       // Inicializa os bancos
       await productDb.initDatabase();
@@ -296,7 +296,8 @@ class CloudSyncService {
 
       // Restaura configurações PIX
       if (data.settings.pixConfig) {
-        pixService.setConfig(data.settings.pixConfig);
+        // Temporariamente comentado até refatorar
+        // pixService.setConfig(data.settings.pixConfig);
       }
 
     } catch (error) {

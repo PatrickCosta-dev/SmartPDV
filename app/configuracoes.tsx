@@ -1,7 +1,5 @@
-<<<<<<< HEAD
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import {
   Button,
   Card,
@@ -13,39 +11,14 @@ import {
   Title
 } from 'react-native-paper';
 import BackupManagerDialog from '../components/BackupManagerDialog';
-import PixTest from '../components/PixTest';
 import { PixConfig, PixService } from '../src/services/pixService';
 
 export default function ConfiguracoesScreen() {
   const [pixConfig, setPixConfig] = useState<PixConfig>({
-    pixKey: '',
-    pixKeyType: 'email',
-    beneficiaryName: '',
-    beneficiaryCity: ''
-=======
-import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import {
-    Button,
-    Card,
-    Divider,
-    List,
-    Switch,
-    Text,
-    TextInput,
-    Title
-} from 'react-native-paper';
-import BackupManagerDialog from '../components/BackupManagerDialog';
-import type { PixConfig } from '../src/services/pixService';
-import { pixService } from '../src/services/pixService';
-
-export default function ConfiguracoesScreen() {
-  const [pixConfig, setPixConfig] = useState<PixConfig>({
-    pixKey: 'smartpdv@exemplo.com',
-    pixKeyType: 'email',
+    pixKey: '12345678000199',
+    pixKeyType: 'cnpj',
     beneficiaryName: 'SmartPDV Store',
     beneficiaryCity: 'SAO PAULO'
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +30,6 @@ export default function ConfiguracoesScreen() {
 
   const loadPixConfig = async () => {
     try {
-<<<<<<< HEAD
       console.log('Carregando configurações PIX...');
       const config = await PixService.loadConfig();
       console.log('Configurações PIX carregadas:', config);
@@ -66,22 +38,15 @@ export default function ConfiguracoesScreen() {
       console.error('Erro ao carregar configurações PIX:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       Alert.alert('Erro', `Não foi possível carregar as configurações PIX: ${errorMessage}`);
-=======
-      // Em uma implementação real, carregaria do storage
-      // Por enquanto, usa os valores padrão
-    } catch (error) {
-      console.error('Erro ao carregar configurações PIX:', error);
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
     }
   };
 
   const savePixConfig = async () => {
     setIsLoading(true);
     try {
-<<<<<<< HEAD
       // Validação das configurações
       if (!pixConfig.pixKey || !pixConfig.pixKey.trim()) {
-        Alert.alert('Erro', 'A chave PIX é obrigatória');
+        Alert.alert('Erro', 'O CNPJ é obrigatório');
         return;
       }
 
@@ -92,6 +57,12 @@ export default function ConfiguracoesScreen() {
 
       if (!pixConfig.beneficiaryCity || !pixConfig.beneficiaryCity.trim()) {
         Alert.alert('Erro', 'A cidade do beneficiário é obrigatória');
+        return;
+      }
+
+      // Validar CNPJ
+      if (!PixService.validatePixKey(pixConfig.pixKey, 'cnpj')) {
+        Alert.alert('Erro', 'CNPJ inválido. Verifique o número digitado.');
         return;
       }
 
@@ -108,13 +79,6 @@ export default function ConfiguracoesScreen() {
       console.error('Erro ao salvar configurações PIX:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       Alert.alert('Erro', `Não foi possível salvar as configurações PIX: ${errorMessage}`);
-=======
-      pixService.setConfig(pixConfig);
-      Alert.alert('Sucesso', 'Configurações PIX salvas com sucesso!');
-    } catch (error) {
-      console.error('Erro ao salvar configurações PIX:', error);
-      Alert.alert('Erro', 'Não foi possível salvar as configurações PIX.');
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
     } finally {
       setIsLoading(false);
     }
@@ -122,31 +86,10 @@ export default function ConfiguracoesScreen() {
 
   const testPixConfig = async () => {
     try {
-<<<<<<< HEAD
       const result = await PixService.generatePixQRCodeWithConfig(10.00, 'Teste PIX');
       Alert.alert(
         'Teste PIX',
-        `QR Code gerado com sucesso!\n\nChave: ${pixConfig.pixKey}\nValor: R$ 10,00\n\nDados PIX: ${result.qrCodeData.substring(0, 100)}...`
-=======
-      // Simula uma venda de teste
-      const testSale = {
-        id: 'test_001',
-        items: [{ id: 1, name: 'Produto Teste', price: 10.00, quantity: 1 }],
-        subtotal: 10.00,
-        total: 10.00,
-        discount: 0,
-        finalTotal: 10.00,
-        paymentMethod: 'pix',
-        date: new Date().toISOString(),
-        customerName: 'Cliente Teste',
-        notes: 'Venda de teste'
-      };
-
-      const payment = await pixService.generatePixPayment(testSale);
-      Alert.alert(
-        'Teste PIX',
-        `QR Code gerado com sucesso!\n\nChave: ${payment.pixKey}\nValor: R$ ${payment.amount.toFixed(2)}\n\nID do Pagamento: ${payment.id}`
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
+        `QR Code gerado com sucesso!\n\nCNPJ: ${PixService.formatCNPJ(pixConfig.pixKey)}\nValor: R$ 10,00\n\nDados PIX: ${result.qrCodeData.substring(0, 100)}...`
       );
     } catch (error) {
       console.error('Erro no teste PIX:', error);
@@ -154,45 +97,23 @@ export default function ConfiguracoesScreen() {
     }
   };
 
-<<<<<<< HEAD
   const clearPixConfig = async () => {
     try {
-      await AsyncStorage.removeItem('@smartpdv_pix_config');
-      Alert.alert('Sucesso', 'Configurações PIX limpas com sucesso!');
+      await PixService.saveConfig({
+        pixKey: '58631747000128',
+        pixKeyType: 'cnpj',
+        beneficiaryName: 'SmartPDV Store',
+        beneficiaryCity: 'SAO PAULO'
+      });
+      Alert.alert('Sucesso', 'Configurações PIX resetadas para padrão!');
       loadPixConfig(); // Recarregar configurações
     } catch (error) {
-      console.error('Erro ao limpar configurações PIX:', error);
+      console.error('Erro ao resetar configurações PIX:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      Alert.alert('Erro', `Não foi possível limpar as configurações PIX: ${errorMessage}`);
+      Alert.alert('Erro', `Não foi possível resetar as configurações PIX: ${errorMessage}`);
     }
   };
 
-  const testAsyncStorage = async () => {
-    try {
-      console.log('Testando AsyncStorage...');
-      
-      // Teste de escrita
-      await AsyncStorage.setItem('test_key', 'test_value');
-      console.log('Valor salvo no AsyncStorage');
-      
-      // Teste de leitura
-      const value = await AsyncStorage.getItem('test_key');
-      console.log('Valor lido do AsyncStorage:', value);
-      
-      // Limpar teste
-      await AsyncStorage.removeItem('test_key');
-      console.log('Teste limpo');
-      
-      Alert.alert('Teste AsyncStorage', 'AsyncStorage está funcionando corretamente!');
-    } catch (error) {
-      console.error('Erro no teste AsyncStorage:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      Alert.alert('Erro', `AsyncStorage não está funcionando: ${errorMessage}`);
-    }
-  };
-
-=======
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
   return (
     <ScrollView style={styles.container}>
       <Title style={styles.title}>Configurações</Title>
@@ -202,43 +123,31 @@ export default function ConfiguracoesScreen() {
         <Card.Content>
           <Title style={styles.cardTitle}>Configurações PIX</Title>
           <Text style={styles.cardDescription}>
-            Configure suas informações PIX para receber pagamentos
+            Configure seu CNPJ para receber pagamentos PIX
           </Text>
 
           <Divider style={styles.divider} />
 
           <TextInput
-            label="Chave PIX"
+            label="CNPJ"
             value={pixConfig.pixKey}
-            onChangeText={(text) => setPixConfig(prev => ({ ...prev, pixKey: text }))}
+            onChangeText={(text) => {
+              const cleanText = text.replace(/\D/g, '');
+              setPixConfig(prev => ({ ...prev, pixKey: cleanText }));
+            }}
             mode="outlined"
             style={styles.input}
-            placeholder="exemplo@email.com"
+            placeholder="58631747000128"
+            keyboardType="numeric"
+            maxLength={18}
           />
 
-          <Text style={styles.label}>Tipo de Chave PIX:</Text>
-          <View style={styles.pixKeyTypes}>
-            {[
-              { value: 'email', label: 'Email' },
-              { value: 'cpf', label: 'CPF' },
-              { value: 'cnpj', label: 'CNPJ' },
-              { value: 'phone', label: 'Telefone' },
-              { value: 'random', label: 'Aleatória' }
-            ].map((type) => (
-              <Button
-                key={type.value}
-                mode={pixConfig.pixKeyType === type.value ? 'contained' : 'outlined'}
-                onPress={() => setPixConfig(prev => ({ ...prev, pixKeyType: type.value as any }))}
-                style={styles.pixKeyTypeButton}
-                compact
-              >
-                {type.label}
-              </Button>
-            ))}
-          </View>
+          <Text style={styles.helperText}>
+            CNPJ formatado: {pixConfig.pixKey ? PixService.formatCNPJ(pixConfig.pixKey) : 'Não informado'}
+          </Text>
 
           <TextInput
-            label="Nome do Beneficiário"
+            label="Nome da Empresa"
             value={pixConfig.beneficiaryName}
             onChangeText={(text) => setPixConfig(prev => ({ ...prev, beneficiaryName: text }))}
             mode="outlined"
@@ -247,7 +156,7 @@ export default function ConfiguracoesScreen() {
           />
 
           <TextInput
-            label="Cidade do Beneficiário"
+            label="Cidade"
             value={pixConfig.beneficiaryCity}
             onChangeText={(text) => setPixConfig(prev => ({ ...prev, beneficiaryCity: text }))}
             mode="outlined"
@@ -275,44 +184,18 @@ export default function ConfiguracoesScreen() {
               Salvar
             </Button>
           </View>
-<<<<<<< HEAD
 
           <View style={styles.buttonContainer}>
             <Button
               mode="outlined"
               onPress={clearPixConfig}
               style={styles.button}
-              icon="delete"
-              buttonColor="#ff4444"
-            >
-              Limpar Configurações
-            </Button>
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <Button
-              mode="outlined"
-              onPress={testAsyncStorage}
-              style={styles.button}
-              icon="bug"
+              icon="refresh"
               buttonColor="#ffaa00"
             >
-              Testar AsyncStorage
+              Resetar Configurações
             </Button>
           </View>
-        </Card.Content>
-      </Card>
-
-      {/* Teste PIX */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Title style={styles.cardTitle}>Teste PIX</Title>
-          <Text style={styles.cardDescription}>
-            Teste a funcionalidade PIX
-          </Text>
-          <PixTest />
-=======
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
         </Card.Content>
       </Card>
 
@@ -396,58 +279,56 @@ export default function ConfiguracoesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = {
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#f6f6f6',
+    backgroundColor: '#f5f5f5'
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: 'bold' as const,
     marginBottom: 20,
-    color: '#333',
+    textAlign: 'center' as const
   },
   card: {
     marginBottom: 16,
+    elevation: 4
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: 'bold' as const,
+    marginBottom: 8
   },
   cardDescription: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    marginBottom: 16
   },
   divider: {
-    marginVertical: 16,
+    marginVertical: 16
   },
   input: {
+    marginBottom: 16
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
     marginBottom: 16,
+    fontStyle: 'italic' as const
   },
   label: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
-  },
-  pixKeyTypes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  pixKeyTypeButton: {
-    marginBottom: 8,
+    fontWeight: 'bold' as const,
+    marginBottom: 8
   },
   buttonContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    marginTop: 16
   },
   button: {
     flex: 1,
-  },
-}); 
+    marginHorizontal: 4
+  }
+}; 

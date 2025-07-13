@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import {
-<<<<<<< HEAD
   Button,
   Card,
   Dialog,
@@ -12,18 +11,6 @@ import {
   SegmentedButtons,
   Text,
   TextInput
-=======
-    Button,
-    Card,
-    Dialog,
-    Divider,
-    IconButton,
-    Portal,
-    Searchbar,
-    SegmentedButtons,
-    Text,
-    TextInput
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
 } from 'react-native-paper';
 import ItemDiscountDialog from '../components/ItemDiscountDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
@@ -48,11 +35,7 @@ export default function PDVScreen() {
   const [discountInput, setDiscountInput] = useState('');
   const [discountPercentInput, setDiscountPercentInput] = useState('');
   const [couponCodeInput, setCouponCodeInput] = useState('');
-<<<<<<< HEAD
-  const [paymentMethod, setPaymentMethod] = useState('dinheiro');
-=======
   const [paymentMethod, setPaymentMethod] = useState('money');
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
   const [selectedItem, setSelectedItem] = useState<CartItem | null>(null);
   const [lastSale, setLastSale] = useState<any>(null);
   
@@ -200,11 +183,7 @@ export default function PDVScreen() {
       setDiscountInput('');
       setDiscountPercentInput('');
       setCouponCodeInput('');
-<<<<<<< HEAD
-      setPaymentMethod('dinheiro');
-=======
       setPaymentMethod('money');
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
       setDiscount(0);
       setDiscountPercent(0);
       
@@ -230,19 +209,11 @@ export default function PDVScreen() {
     }
   };
 
-<<<<<<< HEAD
-  const handlePixPaymentSuccess = () => {
-=======
-  const handlePixPaymentSuccess = (payment: any) => {
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
+  const handlePixPaymentSuccess = (payment?: any) => {
     setShowPixDialog(false);
     Alert.alert(
-      'Pagamento Confirmado!',
-      'Pagamento PIX realizado com sucesso! Deseja imprimir o comprovante?',
-      [
-        { text: 'Não', style: 'cancel' },
-        { text: 'Sim', onPress: () => setShowPrintDialog(true) }
-      ]
+      'Pagamento PIX realizado',
+      'O pagamento foi confirmado com sucesso!'
     );
   };
 
@@ -564,14 +535,9 @@ export default function PDVScreen() {
       <PixPaymentDialog
         visible={showPixDialog}
         onDismiss={() => setShowPixDialog(false)}
-<<<<<<< HEAD
         amount={lastSale?.finalTotal || 0}
         onPaymentSuccess={handlePixPaymentSuccess}
         onPaymentError={(error) => Alert.alert('Erro', error)}
-=======
-        sale={lastSale}
-        onPaymentSuccess={handlePixPaymentSuccess}
->>>>>>> 3be8b7dcf4464b53d4ea99e564c468fe98b8f220
       />
     </View>
   );

@@ -13,7 +13,7 @@ export default function PixTest() {
       
       Alert.alert(
         'PIX Teste - Sucesso!',
-        `QR Code gerado com sucesso!\n\nDados PIX: ${result.qrCodeData.substring(0, 100)}...\n\nImagem: ${result.qrCodeImage.substring(0, 50)}...`
+        `QR Code gerado com sucesso!\n\nCNPJ: ${PixService.formatCNPJ('12345678000199')}\nValor: R$ 10,50\n\nDados PIX: ${result.qrCodeData.substring(0, 100)}...\n\nImagem: ${result.qrCodeImage.substring(0, 50)}...`
       );
     } catch (error) {
       console.error('Erro no teste PIX:', error);
@@ -25,11 +25,10 @@ export default function PixTest() {
 
   const testPixValidation = () => {
     const testCases = [
-      { key: 'teste@email.com', type: 'email', expected: true },
-      { key: '12345678901', type: 'cpf', expected: true },
+      { key: '12345678000199', type: 'cnpj', expected: true },
       { key: '12345678901234', type: 'cnpj', expected: true },
-      { key: '11999999999', type: 'phone', expected: true },
-      { key: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456', type: 'random', expected: true },
+      { key: '11111111111111', type: 'cnpj', expected: false }, // CNPJ inválido
+      { key: '12345678901', type: 'cnpj', expected: false }, // CPF em vez de CNPJ
     ];
 
     testCases.forEach(({ key, type, expected }) => {
@@ -37,29 +36,71 @@ export default function PixTest() {
       console.log(`Teste ${type}: ${key} -> ${result} (esperado: ${expected})`);
     });
 
-    Alert.alert('Validação PIX', 'Verifique o console para ver os resultados dos testes de validação.');
+    Alert.alert('Validação PIX', 'Verifique o console para ver os resultados dos testes de validação de CNPJ.');
+  };
+
+  const testCNPJFormatting = () => {
+    const testCNPJs = [
+      '12345678000199',
+      '98765432000187',
+      '11111111111111'
+    ];
+
+    testCNPJs.forEach(cnpj => {
+      const formatted = PixService.formatCNPJ(cnpj);
+      const cleaned = PixService.cleanCNPJ(formatted);
+      console.log(`CNPJ: ${cnpj} -> Formatado: ${formatted} -> Limpo: ${cleaned}`);
+    });
+
+    Alert.alert('Formatação CNPJ', 'Verifique o console para ver os testes de formatação de CNPJ.');
   };
 
   return (
-    <View style={{ padding: 20, gap: 10 }}>
-      <Text variant="headlineSmall">Teste PIX</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Testes PIX - CNPJ</Text>
       
       <Button
         mode="contained"
         onPress={testPixGeneration}
         loading={loading}
-        icon="qrcode"
+        style={styles.button}
+        icon="qrcode-scan"
       >
         Testar Geração QR Code
       </Button>
-
+      
       <Button
         mode="outlined"
         onPress={testPixValidation}
+        style={styles.button}
         icon="check-circle"
       >
-        Testar Validação de Chaves
+        Testar Validação CNPJ
+      </Button>
+      
+      <Button
+        mode="outlined"
+        onPress={testCNPJFormatting}
+        style={styles.button}
+        icon="format-text"
+      >
+        Testar Formatação CNPJ
       </Button>
     </View>
   );
-} 
+}
+
+const styles = {
+  container: {
+    padding: 16
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    marginBottom: 16,
+    textAlign: 'center' as const
+  },
+  button: {
+    marginBottom: 8
+  }
+}; 

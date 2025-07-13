@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Button, Card, Chip, IconButton, List, TextInput } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -27,14 +27,24 @@ export default function BackupManagerDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<CloudBackup | null>(null);
   const [backupDescription, setBackupDescription] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (visible) {
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (visible && isMounted) {
       loadData();
     }
-  }, [visible]);
+  }, [visible, isMounted]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!isMounted) return;
+    
     setIsLoading(true);
     try {
       const [backupsList, config, stats] = await Promise.all([
@@ -43,38 +53,52 @@ export default function BackupManagerDialog({
         cloudSyncService.getSyncStats()
       ]);
       
-      setBackups(backupsList);
-      setSyncConfig(config);
-      setSyncStats(stats);
+      if (isMounted) {
+        setBackups(backupsList);
+        setSyncConfig(config);
+        setSyncStats(stats);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os dados de backup.');
+      if (isMounted) {
+        Alert.alert('Erro', 'Não foi possível carregar os dados de backup.');
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [isMounted]);
 
-  const handleCreateBackup = async () => {
+  const handleCreateBackup = useCallback(async () => {
     if (!backupDescription.trim()) {
       Alert.alert('Erro', 'Por favor, informe uma descrição para o backup.');
       return;
     }
 
+    if (!isMounted) return;
+
     setIsLoading(true);
     try {
       const backup = await cloudSyncService.createBackup(backupDescription);
-      setBackupDescription('');
-      await loadData();
-      Alert.alert('Sucesso', 'Backup criado com sucesso!');
+      if (isMounted) {
+        setBackupDescription('');
+        await loadData();
+        Alert.alert('Sucesso', 'Backup criado com sucesso!');
+      }
     } catch (error) {
       console.error('Erro ao criar backup:', error);
-      Alert.alert('Erro', 'Não foi possível criar o backup.');
+      if (isMounted) {
+        Alert.alert('Erro', 'Não foi possível criar o backup.');
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [backupDescription, isMounted, loadData]);
 
-  const handleRestoreBackup = async (backup: CloudBackup) => {
+  const handleRestoreBackup = useCallback(async (backup: CloudBackup) => {
     Alert.alert(
       'Confirmar Restauração',
       `Tem certeza que deseja restaurar o backup "${backup.description}"?\n\nEsta ação irá substituir todos os dados atuais.`,
@@ -84,33 +108,43 @@ export default function BackupManagerDialog({
           text: 'Restaurar',
           style: 'destructive',
           onPress: async () => {
+            if (!isMounted) return;
+            
             setIsLoading(true);
             try {
               await cloudSyncService.restoreBackup(backup.id);
-              Alert.alert('Sucesso', 'Backup restaurado com sucesso! O app será reiniciado.');
-              onDismiss();
+              if (isMounted) {
+                Alert.alert('Sucesso', 'Backup restaurado com sucesso! O app será reiniciado.');
+                onDismiss();
+              }
             } catch (error) {
               console.error('Erro ao restaurar backup:', error);
-              Alert.alert('Erro', 'Não foi possível restaurar o backup.');
+              if (isMounted) {
+                Alert.alert('Erro', 'Não foi possível restaurar o backup.');
+              }
             } finally {
-              setIsLoading(false);
+              if (isMounted) {
+                setIsLoading(false);
+              }
             }
           }
         }
       ]
     );
-  };
+  }, [isMounted, onDismiss]);
 
-  const handleExportBackup = async (backup: CloudBackup) => {
+  const handleExportBackup = useCallback(async (backup: CloudBackup) => {
     try {
       await cloudSyncService.exportBackup(backup.id);
     } catch (error) {
       console.error('Erro ao exportar backup:', error);
-      Alert.alert('Erro', 'Não foi possível exportar o backup.');
+      if (isMounted) {
+        Alert.alert('Erro', 'Não foi possível exportar o backup.');
+      }
     }
-  };
+  }, [isMounted]);
 
-  const handleDeleteBackup = async (backup: CloudBackup) => {
+  const handleDeleteBackup = useCallback(async (backup: CloudBackup) => {
     Alert.alert(
       'Confirmar Exclusão',
       `Tem certeza que deseja excluir o backup "${backup.description}"?`,
@@ -122,48 +156,54 @@ export default function BackupManagerDialog({
           onPress: async () => {
             try {
               await cloudSyncService.deleteBackup(backup.id);
-              await loadData();
-              Alert.alert('Sucesso', 'Backup excluído com sucesso!');
+              if (isMounted) {
+                await loadData();
+                Alert.alert('Sucesso', 'Backup excluído com sucesso!');
+              }
             } catch (error) {
               console.error('Erro ao deletar backup:', error);
-              Alert.alert('Erro', 'Não foi possível excluir o backup.');
+              if (isMounted) {
+                Alert.alert('Erro', 'Não foi possível excluir o backup.');
+              }
             }
           }
         }
       ]
     );
-  };
+  }, [isMounted, loadData]);
 
-  const handleImportBackup = async () => {
+  const handleImportBackup = useCallback(async () => {
     try {
       const success = await cloudSyncService.importBackup();
-      if (success) {
+      if (success && isMounted) {
         Alert.alert('Sucesso', 'Backup importado e restaurado com sucesso!');
         onDismiss();
       }
     } catch (error) {
       console.error('Erro ao importar backup:', error);
-      Alert.alert('Erro', 'Não foi possível importar o backup.');
+      if (isMounted) {
+        Alert.alert('Erro', 'Não foi possível importar o backup.');
+      }
     }
-  };
+  }, [isMounted, onDismiss]);
 
-  const handleUpdateConfig = async (updates: Partial<SyncConfig>) => {
-    if (!syncConfig) return;
+  const handleUpdateConfig = useCallback(async (updates: Partial<SyncConfig>) => {
+    if (!syncConfig || !isMounted) return;
 
     const newConfig = { ...syncConfig, ...updates };
     cloudSyncService.setConfig(newConfig);
     setSyncConfig(newConfig);
-  };
+  }, [syncConfig, isMounted]);
 
-  const formatBytes = (bytes: number) => {
+  const formatBytes = useCallback((bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -171,16 +211,29 @@ export default function BackupManagerDialog({
       hour: '2-digit',
       minute: '2-digit'
     });
+  }, []);
+
+  // Função utilitária para garantir string
+  const getLastBackupString = (lastBackup: string | Date | null) => {
+    if (!lastBackup) return '';
+    if (typeof lastBackup === 'string') return lastBackup;
+    if (lastBackup instanceof Date) return lastBackup.toISOString();
+    return '';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'idle': return '#4caf50';
       case 'syncing': return '#ff9800';
       case 'error': return '#f44336';
       default: return '#666';
     }
-  };
+  }, []);
+
+  // Não renderiza nada se não estiver montado
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <Modal
@@ -215,7 +268,9 @@ export default function BackupManagerDialog({
                     </View>
                     <View style={styles.statItem}>
                       <Text style={styles.statValue}>
-                        {syncStats.lastBackup ? formatDate(syncStats.lastBackup.toISOString()) : 'Nunca'}
+                        {syncStats.lastBackup
+                          ? formatDate(getLastBackupString(syncStats.lastBackup))
+                          : 'Nunca'}
                       </Text>
                       <Text style={styles.statLabel}>Último Backup</Text>
                     </View>
