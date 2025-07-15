@@ -4,7 +4,7 @@ import * as Sharing from 'expo-sharing';
 import type { Customer } from '../database/customerService';
 import type { Product } from '../database/productService';
 import type { Sale } from '../database/salesService';
-// Removido PixPaymentData pois não é mais exportado
+
 
 export interface CloudBackup {
   id: string;
@@ -16,7 +16,7 @@ export interface CloudBackup {
     products: Product[];
     sales: Sale[];
     customers: Customer[];
-    pixPayments: any[]; // Temporariamente any até refatorar
+  
     settings: any;
   };
   checksum: string;
@@ -143,16 +143,8 @@ class CloudSyncService {
       const products = await productDb.getAllProducts();
       const sales = await salesDb.getAllSales();
       const customers = await customerService.getAllCustomers();
-      const pixPayments: any[] = []; // Temporariamente vazio até refatorar
-      
       // Configurações (simuladas)
       const settings = {
-        pixConfig: {
-          pixKey: '12345678000199',
-          pixKeyType: 'cnpj',
-          beneficiaryName: 'SmartPDV Store',
-          beneficiaryCity: 'SAO PAULO'
-        },
         appSettings: {
           autoBackup: this.config.autoBackup,
           notifications: true,
@@ -164,7 +156,6 @@ class CloudSyncService {
         products,
         sales,
         customers,
-        pixPayments,
         settings
       };
     } catch (error) {
@@ -294,11 +285,7 @@ class CloudSyncService {
         await customerService.addCustomer(customer);
       }
 
-      // Restaura configurações PIX
-      if (data.settings.pixConfig) {
-        // Temporariamente comentado até refatorar
-        // pixService.setConfig(data.settings.pixConfig);
-      }
+
 
     } catch (error) {
       console.error('Erro ao restaurar dados:', error);

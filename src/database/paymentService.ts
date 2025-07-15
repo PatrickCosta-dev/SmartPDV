@@ -102,8 +102,12 @@ class PaymentService {
 
         case 'pix':
           // Simular processamento PIX
-          payment.status = 'aprovado';
-          payment.transactionId = `PIX_${Date.now()}`;
+          if (payment.pixKey && payment.pixKey.trim()) {
+            payment.status = 'aprovado';
+            payment.transactionId = `PIX_${Date.now()}`;
+          } else {
+            payment.status = 'rejeitado';
+          }
           break;
 
         case 'cartao_credito':

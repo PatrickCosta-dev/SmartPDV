@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { Button, Card, TextInput as PaperTextInput } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { PaymentMethod as PaymentMethodType, paymentService } from '../src/database/paymentService';
+import { PaymentMethod as PaymentMethodType, paymentService, type PaymentReceipt } from '../src/database/paymentService';
 import { PAYMENT_METHODS, useCartStore } from '../src/store/cartStore';
+import ReceiptDialog from './ReceiptDialog';
 
 interface PaymentDialogProps {
   visible: boolean;
@@ -31,12 +32,17 @@ export default function PaymentDialog({ visible, onClose, onSuccess, total }: Pa
   const [cardCVV, setCardCVV] = useState('');
   const [installments, setInstallments] = useState('1');
   const [processing, setProcessing] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [generatedReceipt, setGeneratedReceipt] = useState<PaymentReceipt | null>(null);
   
   const { 
+    items,
     selectedCustomer, 
     loyaltyPointsUsed, 
     useLoyaltyPoints,
     getLoyaltyPointsEarned,
+    getSubtotal,
+    getTotalDiscount,
     clearCart 
   } = useCartStore();
 
@@ -112,34 +118,35 @@ export default function PaymentDialog({ visible, onClose, onSuccess, total }: Pa
         paymentId: Date.now().toString(),
         saleId: Date.now().toString(),
         customerName: selectedCustomer?.name,
-        items: [], // Será preenchido pelo PDV
-        subtotal: total,
-        discount: 0, // Será calculado pelo PDV
+        items: items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          totalPrice: item.price * item.quantity
+        })),
+        subtotal: getSubtotal(),
+        discount: getTotalDiscount(),
         total: total,
         paymentMethod: selectedMethod as PaymentMethodType,
         receivedAmount: selectedMethod === 'dinheiro' ? parseFloat(receivedAmount) : undefined,
         change: selectedMethod === 'dinheiro' ? change : undefined,
       });
 
-      Alert.alert(
-        'Pagamento Aprovado!',
-        `Comprovante #${receipt.receiptNumber} gerado com sucesso.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              clearCart();
-              onSuccess();
-              onClose();
-            }
-          }
-        ]
-      );
+      setGeneratedReceipt(receipt);
+      setShowReceipt(true);
+      onClose();
     } catch (error) {
       Alert.alert('Erro', 'Erro ao processar pagamento');
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleReceiptClose = () => {
+    setShowReceipt(false);
+    setGeneratedReceipt(null);
+    clearCart();
+    onSuccess();
   };
 
   const formatCurrency = (value: number) => {
@@ -359,6 +366,12 @@ export default function PaymentDialog({ visible, onClose, onSuccess, total }: Pa
           </View>
         </View>
       </View>
+
+      <ReceiptDialog
+        visible={showReceipt}
+        onDismiss={handleReceiptClose}
+        receipt={generatedReceipt}
+      />
     </Modal>
   );
 }

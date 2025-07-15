@@ -25,7 +25,7 @@ describe('SalesService', () => {
         subtotal: 20,
         discount: 0,
         finalTotal: 20,
-        paymentMethod: 'PIX',
+        paymentMethod: 'dinheiro',
         customerName: 'Cliente Teste'
       };
 
@@ -34,7 +34,7 @@ describe('SalesService', () => {
       const sales = await salesDb.getAllSales();
       expect(sales).toHaveLength(1);
       expect(savedSale.finalTotal).toBe(20);
-      expect(savedSale.paymentMethod).toBe('PIX');
+      expect(savedSale.paymentMethod).toBe('dinheiro');
     });
 
     it('deve gerar ID automático para a venda', async () => {
@@ -65,7 +65,7 @@ describe('SalesService', () => {
         subtotal: 10,
         discount: 0,
         finalTotal: 10,
-        paymentMethod: 'PIX'
+        paymentMethod: 'dinheiro'
       };
       const sale2 = {
         items: [{ id: 2, name: 'Produto 2', price: 20, quantity: 1 }],
@@ -92,7 +92,7 @@ describe('SalesService', () => {
         subtotal: 10,
         discount: 0,
         finalTotal: 10,
-        paymentMethod: 'PIX'
+        paymentMethod: 'dinheiro'
       };
       const sale2 = {
         items: [{ id: 2, name: 'Produto 2', price: 20, quantity: 1 }],
@@ -120,7 +120,7 @@ describe('SalesService', () => {
         subtotal: 10,
         discount: 0,
         finalTotal: 10,
-        paymentMethod: 'PIX'
+        paymentMethod: 'dinheiro'
       };
       const sale2 = {
         items: [{ id: 2, name: 'Produto 2', price: 20, quantity: 1 }],
@@ -133,9 +133,9 @@ describe('SalesService', () => {
       await salesDb.saveSale(sale1);
       await salesDb.saveSale(sale2);
 
-      const pixSales = await salesDb.getSalesByPaymentMethod('PIX');
-      expect(pixSales).toHaveLength(1);
-      expect(pixSales[0].paymentMethod).toBe('PIX');
+      const dinheiroSales = await salesDb.getSalesByPaymentMethod('dinheiro');
+      expect(dinheiroSales).toHaveLength(1);
+      expect(dinheiroSales[0].paymentMethod).toBe('dinheiro');
     });
   });
 
@@ -146,7 +146,7 @@ describe('SalesService', () => {
         subtotal: 10,
         discount: 0,
         finalTotal: 10,
-        paymentMethod: 'PIX'
+        paymentMethod: 'dinheiro'
       };
       const sale2 = {
         items: [{ id: 2, name: 'Produto 2', price: 20, quantity: 1 }],
@@ -172,7 +172,7 @@ describe('SalesService', () => {
         subtotal: 10,
         discount: 0,
         finalTotal: 10,
-        paymentMethod: 'PIX'
+        paymentMethod: 'dinheiro'
       };
 
       const savedSale = await salesDb.saveSale(sale);

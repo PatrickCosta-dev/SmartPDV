@@ -4,7 +4,6 @@ import type { Sale } from '../database/salesService';
 
 export interface PrintOptions {
   includeLogo?: boolean;
-  includeQRCode?: boolean;
   includeFooter?: boolean;
   paperSize?: '80mm' | '58mm' | 'A4';
   copies?: number;
@@ -39,7 +38,6 @@ class PrintService {
     const company = { ...this.defaultCompanyInfo, ...companyInfo };
     const options = { 
       includeLogo: true, 
-      includeQRCode: true, 
       includeFooter: true, 
       paperSize: '80mm' as const,
       copies: 1,
@@ -64,7 +62,6 @@ class PrintService {
     const getPaymentMethodName = (method: string) => {
       const methods: Record<string, string> = {
         dinheiro: 'Dinheiro',
-        pix: 'PIX',
         cartao_credito: 'Cartão de Crédito',
         cartao_debito: 'Cartão de Débito',
         vale: 'Vale'
@@ -93,14 +90,7 @@ class PrintService {
       `;
     }).join('');
 
-    const qrCodeHTML = options.includeQRCode ? `
-      <div style="text-align: center; margin: 10px 0;">
-        <div style="font-size: 10px; color: #666; margin-bottom: 5px;">QR Code para Pagamento</div>
-        <div style="width: 100px; height: 100px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999;">
-          QR Code<br>PIX
-        </div>
-      </div>
-    ` : '';
+
 
     const logoHTML = options.includeLogo ? `
       <div style="text-align: center; margin-bottom: 10px;">
@@ -187,7 +177,6 @@ class PrintService {
             <div class="total-row">Desconto: <span>- ${formatCurrency(sale.discount)}</span></div>
             <div class="total-row final-total">Total: <span>${formatCurrency(sale.finalTotal)}</span></div>
           </div>
-          ${qrCodeHTML}
           ${footerHTML}
         </body>
       </html>

@@ -31,7 +31,7 @@ export interface Coupon {
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
   { id: 'dinheiro', name: 'Dinheiro', icon: 'cash' },
-  { id: 'pix', name: 'PIX', icon: 'qrcode' },
+  { id: 'pix', name: 'PIX', icon: 'qrcode-scan' },
   { id: 'cartao_credito', name: 'Cartão de Crédito', icon: 'credit-card' },
   { id: 'cartao_debito', name: 'Cartão de Débito', icon: 'credit-card-outline' },
   { id: 'vale', name: 'Vale', icon: 'ticket' },

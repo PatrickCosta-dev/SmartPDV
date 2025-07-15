@@ -1,41 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import {
-  Button,
-  Card,
-  Dialog,
-  Divider,
-  IconButton,
-  Portal,
-  Searchbar,
-  SegmentedButtons,
-  Text,
-  TextInput
+    Button,
+    Card,
+    Dialog,
+    IconButton,
+    Portal,
+    Searchbar,
+    Text,
+    TextInput
 } from 'react-native-paper';
 import ItemDiscountDialog from '../components/ItemDiscountDialog';
-import PixPaymentDialog from '../components/PixPaymentDialog';
+import PaymentDialog from '../components/PaymentDialog';
 import PrintReceiptDialog from '../components/PrintReceiptDialog';
 import type { Product } from '../src/database/productService';
 import { db } from '../src/database/productService';
 import { convertCartItemToSaleItem, salesDb } from '../src/database/salesService';
 import type { CartItem } from '../src/store/cartStore';
-import { PAYMENT_METHODS, useCartStore } from '../src/store/cartStore';
+import { useCartStore } from '../src/store/cartStore';
 
 export default function PDVScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [showProductSearch, setShowProductSearch] = useState(false);
-  const [showFinalizeDialog, setShowFinalizeDialog] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [showCouponDialog, setShowCouponDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
-  const [showPixDialog, setShowPixDialog] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [saleNotes, setSaleNotes] = useState('');
   const [discountInput, setDiscountInput] = useState('');
   const [discountPercentInput, setDiscountPercentInput] = useState('');
   const [couponCodeInput, setCouponCodeInput] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('money');
   const [selectedItem, setSelectedItem] = useState<CartItem | null>(null);
   const [lastSale, setLastSale] = useState<any>(null);
   
@@ -148,12 +144,11 @@ export default function PDVScreen() {
     // Preenche os dados do carrinho com os valores do dialog
     setCartCustomerName(customerName);
     setCartSaleNotes(saleNotes);
-    setCartPaymentMethod(paymentMethod);
     
-    setShowFinalizeDialog(true);
+    setShowPaymentDialog(true);
   };
 
-  const confirmFinalizeSale = async () => {
+  const handlePaymentSuccess = async () => {
     try {
       // Converte itens do carrinho para itens de venda
       const saleItems = items.map(convertCartItemToSaleItem);
@@ -165,7 +160,7 @@ export default function PDVScreen() {
         total: getSubtotal(),
         discount: getTotalDiscount(),
         finalTotal: getTotal(),
-        paymentMethod: paymentMethod,
+        paymentMethod: 'dinheiro', // Será definido pelo PaymentDialog
         notes: saleNotes,
         customerName: customerName || undefined
       };
@@ -173,9 +168,6 @@ export default function PDVScreen() {
       // Salva a venda
       const savedSale = await salesDb.saveSale(sale);
       setLastSale(savedSale);
-
-      // Limpa o carrinho
-      clearCart();
       
       // Limpa os campos do dialog
       setCustomerName('');
@@ -183,38 +175,22 @@ export default function PDVScreen() {
       setDiscountInput('');
       setDiscountPercentInput('');
       setCouponCodeInput('');
-      setPaymentMethod('money');
       setDiscount(0);
       setDiscountPercent(0);
       
-      setShowFinalizeDialog(false);
-      
-      // Se for PIX, abre o diálogo de pagamento PIX
-      if (paymentMethod === 'pix') {
-        setShowPixDialog(true);
-      } else {
-        // Para outros métodos, pergunta se quer imprimir
-        Alert.alert(
-          'Venda Finalizada!',
-          'Venda finalizada com sucesso! Deseja imprimir o comprovante?',
-          [
-            { text: 'Não', style: 'cancel' },
-            { text: 'Sim', onPress: () => setShowPrintDialog(true) }
-          ]
-        );
-      }
+      // Pergunta se quer imprimir o comprovante
+      Alert.alert(
+        'Venda Finalizada!',
+        'Venda finalizada com sucesso! Deseja imprimir o comprovante?',
+        [
+          { text: 'Não', style: 'cancel' },
+          { text: 'Sim', onPress: () => setShowPrintDialog(true) }
+        ]
+      );
     } catch (error) {
       console.error('Erro ao finalizar venda:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao finalizar a venda.');
     }
-  };
-
-  const handlePixPaymentSuccess = (payment?: any) => {
-    setShowPixDialog(false);
-    Alert.alert(
-      'Pagamento PIX realizado',
-      'O pagamento foi confirmado com sucesso!'
-    );
   };
 
   const handleDiscountChange = (value: string) => {
@@ -349,88 +325,6 @@ export default function PDVScreen() {
     </Portal>
   );
 
-  const renderFinalizeDialog = () => (
-    <Portal>
-      <Dialog visible={showFinalizeDialog} onDismiss={() => setShowFinalizeDialog(false)}>
-        <Dialog.Title>Finalizar Venda</Dialog.Title>
-        <Dialog.Content>
-          <ScrollView style={styles.dialogContent}>
-            <TextInput
-              label="Nome do Cliente (opcional)"
-              value={customerName}
-              onChangeText={setCustomerName}
-              style={styles.input}
-            />
-            
-            <TextInput
-              label="Observações (opcional)"
-              value={saleNotes}
-              onChangeText={setSaleNotes}
-              multiline
-              numberOfLines={3}
-              style={styles.input}
-            />
-
-            <Text style={styles.sectionTitle}>Forma de Pagamento</Text>
-            <SegmentedButtons
-              value={paymentMethod}
-              onValueChange={setPaymentMethod}
-              buttons={PAYMENT_METHODS.map(method => ({
-                value: method.id,
-                label: method.name,
-                icon: method.icon
-              }))}
-              style={styles.paymentButtons}
-            />
-
-            <Divider style={styles.divider} />
-
-            <View style={styles.saleSummary}>
-              <View style={styles.summaryRow}>
-                <Text>Subtotal:</Text>
-                <Text>{formatCurrency(getSubtotal())}</Text>
-              </View>
-              {discount > 0 && (
-                <View style={styles.summaryRow}>
-                  <Text>Desconto:</Text>
-                  <Text style={styles.discountText}>-{formatCurrency(discount)}</Text>
-                </View>
-              )}
-              {discountPercent > 0 && (
-                <View style={styles.summaryRow}>
-                  <Text>Desconto ({discountPercent}%):</Text>
-                  <Text style={styles.discountText}>
-                    -{formatCurrency((getSubtotal() * discountPercent) / 100)}
-                  </Text>
-                </View>
-              )}
-              {appliedCoupon && (
-                <View style={styles.summaryRow}>
-                  <Text>Cupom {appliedCoupon.code}:</Text>
-                  <Text style={styles.discountText}>
-                    -{formatCurrency(appliedCoupon.type === 'percentage' ? 
-                      (getSubtotal() * appliedCoupon.value) / 100 : 
-                      appliedCoupon.value)}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.summaryRow}>
-                <Text style={styles.finalTotalLabel}>Total Final:</Text>
-                <Text style={styles.finalTotalValue}>{formatCurrency(getTotal())}</Text>
-              </View>
-            </View>
-          </ScrollView>
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={() => setShowFinalizeDialog(false)}>Cancelar</Button>
-          <Button onPress={confirmFinalizeSale} mode="contained">
-            Finalizar Venda
-          </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
-  );
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -517,7 +411,13 @@ export default function PDVScreen() {
 
       {/* Diálogos */}
       {renderCouponDialog()}
-      {renderFinalizeDialog()}
+      
+      <PaymentDialog
+        visible={showPaymentDialog}
+        onClose={() => setShowPaymentDialog(false)}
+        onSuccess={handlePaymentSuccess}
+        total={getTotal()}
+      />
       
       <ItemDiscountDialog
         visible={showDiscountDialog}
@@ -530,14 +430,6 @@ export default function PDVScreen() {
         visible={showPrintDialog}
         onDismiss={() => setShowPrintDialog(false)}
         sale={lastSale}
-      />
-
-      <PixPaymentDialog
-        visible={showPixDialog}
-        onDismiss={() => setShowPixDialog(false)}
-        amount={lastSale?.finalTotal || 0}
-        onPaymentSuccess={handlePixPaymentSuccess}
-        onPaymentError={(error) => Alert.alert('Erro', error)}
       />
     </View>
   );

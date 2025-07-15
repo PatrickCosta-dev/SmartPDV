@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
     Alert,
     Modal,
@@ -12,7 +12,7 @@ import {
 import { Button, Card, Checkbox, Divider } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import type { Sale } from '../src/database/salesService';
-import { PixService } from '../src/services/pixService';
+
 import { printService, type PrintOptions, type ReceiptData } from '../src/services/printService';
 
 interface PrintReceiptDialogProps {
@@ -36,7 +36,6 @@ export default function PrintReceiptDialog({
 }: PrintReceiptDialogProps) {
   const [printOptions, setPrintOptions] = useState<PrintOptions>({
     includeLogo: true,
-    includeQRCode: true,
     includeFooter: true,
     paperSize: '80mm',
     copies: 1
@@ -44,23 +43,6 @@ export default function PrintReceiptDialog({
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [pixConfig, setPixConfig] = useState<any>(null);
-
-  // Carrega as configurações PIX quando o componente é montado
-  useEffect(() => {
-    const loadPixConfig = async () => {
-      try {
-        const config = await PixService.loadConfig();
-        setPixConfig(config);
-      } catch (error) {
-        console.error('Erro ao carregar configurações PIX:', error);
-      }
-    };
-
-    if (visible) {
-      loadPixConfig();
-    }
-  }, [visible]);
 
   const handlePrint = async () => {
     if (!sale) return;
@@ -70,10 +52,10 @@ export default function PrintReceiptDialog({
       const receiptData: ReceiptData = {
         sale,
         companyInfo: companyInfo || {
-          name: pixConfig?.beneficiaryName || 'SmartPDV Store',
+          name: 'SmartPDV Store',
           address: 'Rua das Flores, 123 - Centro',
           phone: '(11) 99999-9999',
-          cnpj: pixConfig ? PixService.formatCNPJ(pixConfig.pixKey) : '12.345.678/0001-90',
+          cnpj: '12.345.678/0001-90',
           website: 'www.smartpdv.com'
         },
         printOptions
@@ -98,10 +80,10 @@ export default function PrintReceiptDialog({
       const receiptData: ReceiptData = {
         sale,
         companyInfo: companyInfo || {
-          name: pixConfig?.beneficiaryName || 'SmartPDV Store',
+          name: 'SmartPDV Store',
           address: 'Rua das Flores, 123 - Centro',
           phone: '(11) 99999-9999',
-          cnpj: pixConfig ? PixService.formatCNPJ(pixConfig.pixKey) : '12.345.678/0001-90',
+          cnpj: '12.345.678/0001-90',
           website: 'www.smartpdv.com'
         },
         printOptions
@@ -168,13 +150,13 @@ export default function PrintReceiptDialog({
               <Card.Content>
                 <Text style={styles.cardTitle}>Informações da Empresa</Text>
                 <Text style={styles.saleInfo}>
-                  Nome: {pixConfig?.beneficiaryName || 'SmartPDV Store'}
+                  Nome: SmartPDV Store
                 </Text>
                 <Text style={styles.saleInfo}>
-                  CNPJ: {pixConfig ? PixService.formatCNPJ(pixConfig.pixKey) : '12.345.678/0001-90'}
+                  CNPJ: 12.345.678/0001-90
                 </Text>
                 <Text style={styles.saleInfo}>
-                  Cidade: {pixConfig?.beneficiaryCity || 'SAO PAULO'}
+                  Cidade: SAO PAULO
                 </Text>
                 <Text style={styles.saleInfo}>
                   Endereço: Rua das Flores, 123 - Centro
@@ -198,13 +180,7 @@ export default function PrintReceiptDialog({
                   <Text style={styles.optionText}>Incluir Logo da Empresa</Text>
                 </View>
 
-                <View style={styles.optionRow}>
-                  <Checkbox
-                    status={printOptions.includeQRCode ? 'checked' : 'unchecked'}
-                    onPress={() => updatePrintOption('includeQRCode', !printOptions.includeQRCode)}
-                  />
-                  <Text style={styles.optionText}>Incluir QR Code PIX</Text>
-                </View>
+
 
                 <View style={styles.optionRow}>
                   <Checkbox
