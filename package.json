@@ -10,11 +10,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "test:pure": "jest --config jest.pure.config.js",
     "test:watch": "jest --watch",
-    "test:pure:watch": "jest --config jest.pure.config.js --watch",
     "test:coverage": "jest --coverage",
-    "test:pure:coverage": "jest --config jest.pure.config.js --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "dependencies": {
